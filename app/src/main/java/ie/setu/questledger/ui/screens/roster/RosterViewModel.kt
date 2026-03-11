@@ -22,12 +22,17 @@ enum class RosterSort {
 class RosterViewModel @Inject constructor(
     private val repository: CharacterRepository
 ) : ViewModel() {
+
+    val characters = repository.getAll()
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
     //current sort mode (default: name A-Z)
     private val _sort = MutableStateFlow(RosterSort.NAME_ASC)
     val sort: StateFlow<RosterSort> = _sort.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
     val uiCharacters: StateFlow<List<CharacterEntity>> =
         combine(repository.getAll(), query, sort) { list, q, s ->
             val term = q.trim().lowercase()
@@ -45,6 +50,17 @@ class RosterViewModel @Inject constructor(
                 RosterSort.LEVEL_DESC -> filtered.sortedByDescending { it.level }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun loadCharactersFromApi() {
+        viewModelScope.launch {
+            try {
+                repository.fetchCharactersFromApi()
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to load characters"
+            }
+        }
+    }
     fun onQueryChange(newValue: String) {
         _query.value = newValue.trimStart()
     }
@@ -55,7 +71,14 @@ class RosterViewModel @Inject constructor(
 
     fun deleteCharacter(character: CharacterEntity) {
         viewModelScope.launch {
-            repository.delete(character)
+            try {
+                repository.deleteFromApi(character)
+                repository.delete(character)
+                repository.fetchCharactersFromApi()
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to delete character"
+            }
         }
     }
 

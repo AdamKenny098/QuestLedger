@@ -37,13 +37,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import ie.setu.questledger.data.local.CharacterEntity
 import ie.setu.questledger.ui.screens.roster.RosterSort
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
-
+import ie.setu.questledger.ui.components.general.ShowError
 @Composable
 fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
     val vm: RosterViewModel = hiltViewModel()
 
     val characters = vm.uiCharacters.collectAsState().value
     val query = vm.query.collectAsState().value
+    val error = vm.error.collectAsState().value
 
     var sortExpanded by remember { mutableStateOf(false) }
 
@@ -52,6 +53,14 @@ fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
         color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            if (error != null) {
+                ShowError(
+                    headline = "Network Error",
+                    subtitle = error ?: "Unknown error",
+                    onClick = { vm.loadCharactersFromApi() }
+                )
+                return@Column
+            }
             Text("Character Roster", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
 
@@ -94,6 +103,13 @@ fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
+            Button(
+                onClick = {vm.loadCharactersFromApi() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Load Characters from API")
+            }
+
             if (characters.isEmpty()) {
                 val msg =
                     if (query.isBlank()) "No characters yet. Create one."
@@ -108,7 +124,7 @@ fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
                     items = characters,
                     key = { it.id }
                 ) { c ->
-                    ie.setu.questledger.ui.screens.CharacterCard(
+                    CharacterCard(
                         c = c,
                         onDelete = { vm.deleteCharacter(c) },
                         onOpenDetails = onOpenDetails

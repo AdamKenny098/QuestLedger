@@ -140,13 +140,11 @@ fun ScreenCharacterDetails(
                         else -> {
                             error = null
                             vm.updateCharacter(
-                                c.copy(
-                                    name = name.trim(),
-                                    characterClass = characterClass.trim(),
-                                    race = race.trim(),
-                                    level = level,
-                                    notes = trimmedNotes
-                                )
+                                name = name.trim(),
+                                characterClass = characterClass.trim(),
+                                race = race.trim(),
+                                level = level,
+                                notes = trimmedNotes
                             )
                             onDone()
                         }

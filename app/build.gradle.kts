@@ -5,17 +5,16 @@ plugins {
     alias(libs.plugins.jetbrainsCompose)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
-
 }
 
 android {
-    namespace = "ie.setu.donationx"
+    namespace = "ie.setu.questledger"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "ie.setu.donationx"
+        applicationId = "ie.setu.questledger"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
@@ -33,13 +32,16 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
@@ -61,20 +63,20 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.gson)
+
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
+    kapt("androidx.room:room-compiler:2.7.2")
 
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-
-    implementation("androidx.compose.material:material-icons-extended:<your-compose-version>")
-
-
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

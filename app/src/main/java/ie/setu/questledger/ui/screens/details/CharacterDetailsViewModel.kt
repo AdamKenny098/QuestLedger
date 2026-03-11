@@ -29,17 +29,55 @@ class CharacterDetailsViewModel @Inject constructor(
 
     private val id: Long = checkNotNull(savedStateHandle["id"])
 
+    var isErr = mutableStateOf(false)
+    var error = mutableStateOf(Exception())
+    var isLoading = mutableStateOf(false)
+
     init {
         viewModelScope.launch {
-            repository.getById(id).collect { loaded ->
-                character.value = loaded
+            try {
+                isLoading.value = true
+                character.value = repository.getFromApi(id)
+                isLoading.value = false
+            } catch (e: Exception) {
+                isLoading.value = false
+                isErr.value = true
+                error.value = e
             }
         }
     }
 
-    fun updateCharacter(updated: CharacterEntity) {
+    fun updateCharacter(
+        name: String,
+        characterClass: String,
+        race: String,
+        level: Int,
+        notes: String
+    ) {
         viewModelScope.launch {
-            repository.update(updated)
+            try {
+                isLoading.value = true
+                isErr.value = false
+
+                val updatedCharacter = repository.updateInApi(
+                    character.value.copy(
+                        name = name,
+                        characterClass = characterClass,
+                        race = race,
+                        level = level,
+                        notes = notes
+                    )
+                )
+
+                repository.update(updatedCharacter)
+                character.value = updatedCharacter
+
+                isLoading.value = false
+            } catch (e: Exception) {
+                isLoading.value = false
+                isErr.value = true
+                error.value = e
+            }
         }
     }
 }

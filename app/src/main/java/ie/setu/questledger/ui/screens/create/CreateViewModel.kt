@@ -1,5 +1,6 @@
 package ie.setu.questledger.ui.screens.create
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ie.setu.questledger.data.local.CharacterEntity
@@ -13,6 +14,10 @@ class CreateViewModel @Inject constructor(
     private val repository: CharacterRepository
 ) : ViewModel() {
 
+    var isErr = mutableStateOf(false)
+    var error = mutableStateOf(Exception())
+    var isLoading = mutableStateOf(false)
+
     fun addCharacter(
         name: String,
         characterClass: String,
@@ -21,15 +26,27 @@ class CreateViewModel @Inject constructor(
         notes: String
     ) {
         viewModelScope.launch {
-            repository.insert(
-                CharacterEntity(
-                    name = name,
-                    characterClass = characterClass,
-                    race = race,
-                    level = level,
-                    notes = notes
+            try{
+                isLoading.value = true
+                isErr.value = false
+
+                val createdCharacter = repository.insertToApi(
+                    CharacterEntity(
+                        name = name,
+                        characterClass = characterClass,
+                        race = race,
+                        level = level,
+                        notes = notes
+                    )
                 )
-            )
+            repository.insert(createdCharacter)
+
+            isLoading.value = false
+            } catch (e : Exception){
+                isLoading.value = false
+                isErr.value = true
+                error.value = e
+            }
         }
     }
 }

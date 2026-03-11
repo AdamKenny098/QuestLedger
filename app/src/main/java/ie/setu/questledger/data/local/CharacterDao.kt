@@ -16,10 +16,13 @@ interface CharacterDao {
     fun getAll(): Flow<List<CharacterEntity>>
 
     @Query("SELECT * FROM characters WHERE id = :id LIMIT 1")
-    fun getById(id: Long): kotlinx.coroutines.flow.Flow<CharacterEntity>
+    fun getById(id: Long): Flow<CharacterEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(character: CharacterEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(characters: List<CharacterEntity>)
 
     @Update
     suspend fun update(character: CharacterEntity)
