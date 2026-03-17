@@ -13,6 +13,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
+import com.google.firebase.auth.FirebaseAuth
+import android.util.Log
 
 enum class RosterSort {
     NAME_ASC,
@@ -22,6 +24,10 @@ enum class RosterSort {
 class RosterViewModel @Inject constructor(
     private val repository: CharacterRepository
 ) : ViewModel() {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val email: String
+        get() = auth.currentUser?.email ?: "uh.theo.uh@gmail.com"
 
     val characters = repository.getAll()
     private val _query = MutableStateFlow("")
@@ -52,9 +58,11 @@ class RosterViewModel @Inject constructor(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun loadCharactersFromApi() {
+
         viewModelScope.launch {
             try {
-                repository.fetchCharactersFromApi()
+                Log.d("ROSTER_DEBUG", "Loading for email: $email")
+                repository.fetchCharactersFromApi(email)
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load characters"
@@ -74,7 +82,7 @@ class RosterViewModel @Inject constructor(
             try {
                 repository.deleteFromApi(character)
                 repository.delete(character)
-                repository.fetchCharactersFromApi()
+                repository.fetchCharactersFromApi(email)
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to delete character"

@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "characters")
 data class CharacterEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val email: String = "",
     val name: String,
     val characterClass: String,
     val race: String,

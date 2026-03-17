@@ -23,11 +23,11 @@ class CharacterRepository @Inject constructor(
 
     suspend fun deleteAll() = dao.deleteAll()
 
-    suspend fun fetchCharactersFromApi() {
-        val remoteCharacters = apiService.getCharacters()
+    suspend fun fetchCharactersFromApi(email: String) {
+        val remoteCharacters = apiService.getCharacters(email)
+        dao.deleteAll()
         dao.insertAll(remoteCharacters)
     }
-
     suspend fun insertToApi(character: CharacterEntity): CharacterEntity {
         return apiService.addCharacter(character)
     }
@@ -36,8 +36,8 @@ class CharacterRepository @Inject constructor(
         apiService.deleteCharacter(character.id)
     }
 
-    suspend fun getFromApi(id: Long): CharacterEntity {
-        return apiService.getCharacterById(id)
+    suspend fun getFromApi(email: String, id: Long): CharacterEntity {
+        return apiService.getCharacterById(email, id).first()
     }
 
     suspend fun updateInApi(character: CharacterEntity): CharacterEntity {

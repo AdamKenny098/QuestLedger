@@ -8,11 +8,16 @@ import ie.setu.questledger.data.repository.CharacterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.google.firebase.auth.FirebaseAuth
 
 @HiltViewModel
 class CreateViewModel @Inject constructor(
     private val repository: CharacterRepository
 ) : ViewModel() {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val email: String
+        get() = auth.currentUser?.email ?: "uh.theo.uh@gmail.com"
 
     var isErr = mutableStateOf(false)
     var error = mutableStateOf(Exception())
@@ -32,6 +37,7 @@ class CreateViewModel @Inject constructor(
 
                 val createdCharacter = repository.insertToApi(
                     CharacterEntity(
+                        email = email,
                         name = name,
                         characterClass = characterClass,
                         race = race,
