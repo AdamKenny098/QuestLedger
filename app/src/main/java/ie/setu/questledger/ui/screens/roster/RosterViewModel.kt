@@ -2,19 +2,18 @@ package ie.setu.questledger.ui.screens.roster
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ie.setu.questledger.data.local.CharacterEntity
-import ie.setu.questledger.data.repository.CharacterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import ie.setu.questledger.data.auth.AuthService
+import ie.setu.questledger.data.firestore.FirestoreService
+import ie.setu.questledger.models.CharacterModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
-import com.google.firebase.auth.FirebaseAuth
-import android.util.Log
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 enum class RosterSort {
     NAME_ASC,
@@ -22,15 +21,13 @@ enum class RosterSort {
 }
 @HiltViewModel
 class RosterViewModel @Inject constructor(
-    private val repository: CharacterRepository
+    private val repository: FirestoreService,
+    private val authService: AuthService
 ) : ViewModel() {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val email: String
-        get() = auth.currentUser?.email ?: "uh.theo.uh@gmail.com"
-
-    val characters = repository.getAll()
+    private val _characters = MutableStateFlow<List<CharacterModel>>(emptyList())
     private val _query = MutableStateFlow("")
+
     val query: StateFlow<String> = _query.asStateFlow()
 
     //current sort mode (default: name A-Z)
@@ -38,9 +35,9 @@ class RosterViewModel @Inject constructor(
     val sort: StateFlow<RosterSort> = _sort.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
-    val uiCharacters: StateFlow<List<CharacterEntity>> =
-        combine(repository.getAll(), query, sort) { list, q, s ->
+    val error: StateFlow<String?> = _error.asStateFlow()
+    val uiCharacters: StateFlow<List<CharacterModel>> =
+        combine(_characters, query, sort) { list, q, s ->
             val term = q.trim().lowercase()
 
             val filtered =
@@ -56,19 +53,23 @@ class RosterViewModel @Inject constructor(
                 RosterSort.LEVEL_DESC -> filtered.sortedByDescending { it.level }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    init {
+        getCharacters()
+    }
 
-    fun loadCharactersFromApi() {
-
+    fun getCharacters() {
         viewModelScope.launch {
             try {
-                Log.d("ROSTER_DEBUG", "Loading for email: $email")
-                repository.fetchCharactersFromApi(email)
-                _error.value = null
+                repository.getAll(authService.email).collect { items ->
+                    _characters.value = items
+                    _error.value = null
+                }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load characters"
             }
         }
     }
+
     fun onQueryChange(newValue: String) {
         _query.value = newValue.trimStart()
     }
@@ -77,12 +78,10 @@ class RosterViewModel @Inject constructor(
         _sort.value = newSort
     }
 
-    fun deleteCharacter(character: CharacterEntity) {
+    fun deleteCharacter(character: CharacterModel) {
         viewModelScope.launch {
             try {
-                repository.deleteFromApi(character)
-                repository.delete(character)
-                repository.fetchCharactersFromApi(email)
+                repository.delete(authService.email, character.id)
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to delete character"
@@ -92,7 +91,14 @@ class RosterViewModel @Inject constructor(
 
     fun deleteAll() {
         viewModelScope.launch {
-            repository.deleteAll()
+            try {
+                _characters.value.forEach { character ->
+                    repository.delete(authService.email, character.id)
+                }
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to delete all characters"
+            }
         }
     }
 }

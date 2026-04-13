@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
@@ -34,12 +33,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import ie.setu.questledger.data.local.CharacterEntity
+import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.ui.components.general.ShowError
 import ie.setu.questledger.ui.screens.roster.RosterSort
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
-import ie.setu.questledger.ui.components.general.ShowError
+
 @Composable
-fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
+fun ScreenRoster(onOpenDetails: (String) -> Unit) {
     val vm: RosterViewModel = hiltViewModel()
 
     val characters = vm.uiCharacters.collectAsState().value
@@ -55,12 +55,13 @@ fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (error != null) {
                 ShowError(
-                    headline = "Network Error",
-                    subtitle = error ?: "Unknown error",
-                    onClick = { vm.loadCharactersFromApi() }
+                    headline = "Load Error",
+                    subtitle = error,
+                    onClick = { vm.getCharacters() }
                 )
                 return@Column
             }
+
             Text("Character Roster", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
 
@@ -103,13 +104,6 @@ fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
-            Button(
-                onClick = {vm.loadCharactersFromApi() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Load Characters from API")
-            }
-
             if (characters.isEmpty()) {
                 val msg =
                     if (query.isBlank()) "No characters yet. Create one."
@@ -133,7 +127,7 @@ fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
                 }
             }
 
-            Button(
+            FilledTonalButton(
                 onClick = { vm.deleteAll() },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -145,9 +139,9 @@ fun ScreenRoster(onOpenDetails: (Long) -> Unit) {
 
 @Composable
 private fun CharacterCard(
-    c: CharacterEntity,
+    c: CharacterModel,
     onDelete: () -> Unit,
-    onOpenDetails: (Long) -> Unit
+    onOpenDetails: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -184,7 +178,6 @@ private fun CharacterCard(
                 Text(if (expanded) "Show Less" else "Show More")
             }
 
-            // Delete only when expanded (optional)
             if (expanded) {
                 FilledTonalIconButton(onClick = onDelete) {
                     Icon(Icons.Filled.Delete, contentDescription = "Delete Character")

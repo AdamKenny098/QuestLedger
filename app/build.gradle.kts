@@ -70,6 +70,7 @@ dependencies {
 
     implementation(libs.firebase.auth)
     implementation(libs.coil.compose)
+    implementation(libs.firebase.firestore)
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")

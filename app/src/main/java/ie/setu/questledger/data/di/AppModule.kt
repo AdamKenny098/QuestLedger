@@ -17,6 +17,9 @@ import javax.inject.Singleton
 import com.google.firebase.auth.FirebaseAuth
 import ie.setu.questledger.data.auth.AuthRepository
 import ie.setu.questledger.data.auth.AuthService
+import com.google.firebase.firestore.FirebaseFirestore
+import ie.setu.questledger.data.firestore.FirestoreRepository
+import ie.setu.questledger.data.firestore.FirestoreService
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -72,4 +75,17 @@ object AppModule {
     fun provideAuthService(
         authRepository: AuthRepository
     ): AuthService = authRepository
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirestoreService(
+        auth: AuthService,
+        firebaseFirestore: FirebaseFirestore
+    ): FirestoreService = FirestoreRepository(
+        firestore = firebaseFirestore
+    )
 }

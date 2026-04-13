@@ -4,36 +4,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ie.setu.questledger.data.local.CharacterEntity
-import ie.setu.questledger.data.repository.CharacterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import ie.setu.questledger.data.auth.AuthService
+import ie.setu.questledger.data.firestore.FirestoreService
+import ie.setu.questledger.models.CharacterModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.google.firebase.auth.FirebaseAuth
 
 @HiltViewModel
 class CharacterDetailsViewModel @Inject constructor(
-    private val repository: CharacterRepository,
+    private val repository: FirestoreService,
+    private val authService: AuthService,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val email: String
-        get() = auth.currentUser?.email ?: "uh.theo.uh@gmail.com"
+    val character = mutableStateOf(CharacterModel())
 
-    val character = mutableStateOf(
-        CharacterEntity(
-            id = 0,
-            email = "",
-            name = "",
-            characterClass = "",
-            race = "",
-            level = 1,
-            notes = ""
-        )
-    )
-
-    private val id: Long = checkNotNull(savedStateHandle["id"])
+    private val id: String = checkNotNull(savedStateHandle["id"])
 
     var isErr = mutableStateOf(false)
     var error = mutableStateOf(Exception())
@@ -43,7 +30,7 @@ class CharacterDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 isLoading.value = true
-                character.value = repository.getFromApi(email, id)
+                character.value = repository.get(authService.email, id) ?: CharacterModel()
                 isLoading.value = false
             } catch (e: Exception) {
                 isLoading.value = false
@@ -65,18 +52,16 @@ class CharacterDetailsViewModel @Inject constructor(
                 isLoading.value = true
                 isErr.value = false
 
-                val updatedCharacter = repository.updateInApi(
-                    character.value.copy(
-                        email = email,
-                        name = name,
-                        characterClass = characterClass,
-                        race = race,
-                        level = level,
-                        notes = notes
-                    )
+                val updatedCharacter = character.value.copy(
+                    email = authService.email,
+                    name = name,
+                    characterClass = characterClass,
+                    race = race,
+                    level = level,
+                    notes = notes
                 )
 
-                repository.update(updatedCharacter)
+                repository.update(authService.email, updatedCharacter)
                 character.value = updatedCharacter
 
                 isLoading.value = false

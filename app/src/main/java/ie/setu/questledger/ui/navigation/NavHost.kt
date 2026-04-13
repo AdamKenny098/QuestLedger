@@ -138,7 +138,7 @@ fun QuestLedgerNavHost(
 
             composable(
                 route = NavRoutes.DETAILS_ROUTE,
-                arguments = listOf(navArgument("id") { type = NavType.LongType })
+                arguments = listOf(navArgument("id") { type = NavType.StringType })
             ) {
                 ScreenCharacterDetails(
                     onDone = { navController.popBackStack() }
