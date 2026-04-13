@@ -32,13 +32,24 @@ class AuthRepository @Inject constructor(
     }
 
     override suspend fun signUp(email: String, password: String, displayName: String) {
+        val uri = Uri.parse("android.resource://ie.setu.questledger/drawable/default_profile")
         val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
 
         val profileUpdates = UserProfileChangeRequest.Builder()
             .setDisplayName(displayName)
+            .setDisplayName(displayName)
             .build()
 
         result.user?.updateProfile(profileUpdates)?.await()
+    }
+
+    override suspend fun updatePhoto(uri: Uri) {
+        firebaseAuth.currentUser!!.updateProfile(
+            UserProfileChangeRequest
+                .Builder()
+                .setPhotoUri(uri)
+                .build()
+        ).await()
     }
 
     override fun signOut() {
