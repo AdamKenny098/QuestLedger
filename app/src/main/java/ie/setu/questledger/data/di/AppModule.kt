@@ -14,6 +14,9 @@ import ie.setu.questledger.data.repository.CharacterRepository
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
+import com.google.firebase.auth.FirebaseAuth
+import ie.setu.questledger.data.auth.AuthRepository
+import ie.setu.questledger.data.auth.AuthService
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -59,4 +62,14 @@ object AppModule {
         apiService: CharacterApiService
     ): CharacterRepository =
         CharacterRepository(characterDao, apiService)
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideAuthService(
+        authRepository: AuthRepository
+    ): AuthService = authRepository
 }

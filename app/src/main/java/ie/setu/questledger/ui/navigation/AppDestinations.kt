@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.Person
 
 interface AppDestination {
     val icon: ImageVector
@@ -30,4 +31,10 @@ object About : AppDestination {
     override val route = NavRoutes.ABOUT
 }
 
-val bottomNavDestinations = listOf(Create, Roster, About)
+object Profile : AppDestination {
+    override val icon = Icons.Filled.Person
+    override val label = "Profile"
+    override val route = NavRoutes.PROFILE
+}
+
+val bottomNavDestinations = listOf(Create, Roster, About, Profile)

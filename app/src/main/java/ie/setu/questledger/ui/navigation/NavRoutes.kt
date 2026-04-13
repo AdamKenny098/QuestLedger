@@ -9,4 +9,8 @@ object NavRoutes {
 
     const val DETAILS_ROUTE = "details/{id}"
 
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val PROFILE = "profile"
+
 }
