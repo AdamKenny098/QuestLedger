@@ -3,6 +3,7 @@ package ie.setu.questledger.data.storage
 import android.net.Uri
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 
 class StorageRepository @Inject constructor(
@@ -11,7 +12,8 @@ class StorageRepository @Inject constructor(
 
     override suspend fun uploadFile(uri: Uri, directory: String): Uri {
         val storageRef = storage.reference
-        val imageRef = storageRef.child("$directory/${uri.lastPathSegment}")
+        val fileName = "${UUID.randomUUID()}.jpg"
+        val imageRef = storageRef.child("$directory/$fileName")
 
         imageRef.putFile(uri).await()
         return imageRef.downloadUrl.await()

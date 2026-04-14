@@ -170,9 +170,9 @@ fun ScreenCharacterDetails(
                                 race = race.trim(),
                                 level = level,
                                 notes = trimmedNotes,
-                                imageUri = selectedImageUri
+                                imageUri = selectedImageUri,
+                                onSuccess = onDone
                             )
-                            onDone()
                         }
                     }
                 },

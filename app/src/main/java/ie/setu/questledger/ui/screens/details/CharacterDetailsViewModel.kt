@@ -49,7 +49,8 @@ class CharacterDetailsViewModel @Inject constructor(
         race: String,
         level: Int,
         notes: String,
-        imageUri: Uri?
+        imageUri: Uri?,
+        onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -77,6 +78,7 @@ class CharacterDetailsViewModel @Inject constructor(
                 character.value = updatedCharacter
 
                 isLoading.value = false
+                onSuccess()
             } catch (e: Exception) {
                 isLoading.value = false
                 isErr.value = true
@@ -84,4 +86,5 @@ class CharacterDetailsViewModel @Inject constructor(
             }
         }
     }
+
 }
