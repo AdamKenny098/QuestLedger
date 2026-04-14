@@ -1,5 +1,6 @@
 package ie.setu.questledger.ui.screens.auth
 
+import com.google.firebase.auth.AuthCredential
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,5 +60,27 @@ class LoginViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun loginWithGoogle(credential: AuthCredential, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+            runCatching {
+                authService.signInWithGoogle(credential)
+            }.onSuccess {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                onSuccess()
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = error.message ?: "Google sign-in failed."
+                )
+            }
+        }
+    }
+
+    fun resetLoginFlow() {
+        _uiState.value = LoginUiState()
     }
 }

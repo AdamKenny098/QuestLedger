@@ -1,6 +1,7 @@
 package ie.setu.questledger.data.auth
 
 import android.net.Uri
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.tasks.await
@@ -37,10 +38,14 @@ class AuthRepository @Inject constructor(
 
         val profileUpdates = UserProfileChangeRequest.Builder()
             .setDisplayName(displayName)
-            .setDisplayName(displayName)
+            .setPhotoUri(uri)
             .build()
 
         result.user?.updateProfile(profileUpdates)?.await()
+    }
+
+    override suspend fun signInWithGoogle(credential: AuthCredential) {
+        firebaseAuth.signInWithCredential(credential).await()
     }
 
     override suspend fun updatePhoto(uri: Uri) {

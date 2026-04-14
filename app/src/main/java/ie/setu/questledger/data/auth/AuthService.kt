@@ -1,7 +1,7 @@
 package ie.setu.questledger.data.auth
 
 import android.net.Uri
-import com.google.firebase.Firebase
+import com.google.firebase.auth.AuthCredential
 
 interface AuthService {
     val currentUserId: String
@@ -12,7 +12,7 @@ interface AuthService {
 
     suspend fun signIn(email: String, password: String)
     suspend fun signUp(email: String, password: String, displayName: String)
-
+    suspend fun signInWithGoogle(credential: AuthCredential)
     suspend fun updatePhoto(uri: Uri)
     fun signOut()
 }
