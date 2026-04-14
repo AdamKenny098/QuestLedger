@@ -3,6 +3,7 @@ package ie.setu.questledger.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Person
@@ -37,4 +38,10 @@ object Profile : AppDestination {
     override val route = NavRoutes.PROFILE
 }
 
-val bottomNavDestinations = listOf(Create, Roster, About, Profile)
+object CampaignMap : AppDestination {
+    override val icon = Icons.Filled.Map
+    override val label = "Map"
+    override val route = "campaign_map"
+}
+
+val bottomNavDestinations = listOf(Create, Roster, About, Profile, CampaignMap)

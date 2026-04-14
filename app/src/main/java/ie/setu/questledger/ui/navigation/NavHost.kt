@@ -19,6 +19,7 @@ import ie.setu.questledger.ui.screens.ScreenRoster
 import ie.setu.questledger.ui.screens.auth.ScreenLogin
 import ie.setu.questledger.ui.screens.auth.ScreenRegister
 import ie.setu.questledger.ui.screens.details.ScreenCharacterDetails
+import ie.setu.questledger.ui.screens.map.CampaignMapScreen
 import ie.setu.questledger.ui.screens.profile.ScreenProfile
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
 
@@ -134,6 +135,10 @@ fun QuestLedgerNavHost(
                         }
                     }
                 )
+            }
+
+            composable(route = CampaignMap.route) {
+                CampaignMapScreen()
             }
 
             composable(
