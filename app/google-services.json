@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "191234368756",
+    "project_id": "questledger-8b101",
+    "storage_bucket": "questledger-8b101.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:191234368756:android:0176d0d62c461cc302aaa1",
+        "android_client_info": {
+          "package_name": "ie.setu.questledger"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "191234368756-sq1c41hh5suj155o032cp8eft8b4jrn2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ie.setu.questledger",
+            "certificate_hash": "20f893cd59677567ecd4f5031f79e416e1fe2451"
+          }
+        },
+        {
+          "client_id": "191234368756-e8edn4cdtq9mg7vi6q71ua8qav026au3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjLkNIMwmEGQErOF8UvLTqQxEN4Fd25NE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "191234368756-e8edn4cdtq9mg7vi6q71ua8qav026au3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -92,6 +92,8 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.googleid)
 
+    implementation(libs.maps.compose)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
