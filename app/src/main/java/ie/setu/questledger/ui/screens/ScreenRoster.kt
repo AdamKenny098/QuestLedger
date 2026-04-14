@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Sort
@@ -31,8 +33,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import ie.setu.questledger.models.CharacterModel
 import ie.setu.questledger.ui.components.general.ShowError
 import ie.setu.questledger.ui.screens.roster.RosterSort
@@ -150,6 +157,22 @@ private fun CharacterCard(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
+        if (c.imageUri.isNotBlank()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(c.imageUri)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Character Image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+            )
+
+            Spacer(Modifier.height(8.dp))
+        }
+
         Text(
             text = "${c.name} — ${c.race} ${c.characterClass} (Lv ${c.level})",
             style = MaterialTheme.typography.titleMedium,

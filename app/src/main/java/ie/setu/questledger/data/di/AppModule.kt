@@ -18,8 +18,11 @@ import com.google.firebase.auth.FirebaseAuth
 import ie.setu.questledger.data.auth.AuthRepository
 import ie.setu.questledger.data.auth.AuthService
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import ie.setu.questledger.data.firestore.FirestoreRepository
 import ie.setu.questledger.data.firestore.FirestoreService
+import ie.setu.questledger.data.storage.StorageRepository
+import ie.setu.questledger.data.storage.StorageService
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -61,10 +64,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCharacterRepository(
-        characterDao: CharacterDao,
-        apiService: CharacterApiService
-    ): CharacterRepository =
-        CharacterRepository(characterDao, apiService)
+        dao: CharacterDao,
+        apiService: CharacterApiService,
+        storageService: StorageService
+    ): CharacterRepository = CharacterRepository(
+        dao = dao,
+        apiService = apiService,
+        storageService = storageService
+    )
 
     @Provides
     @Singleton
@@ -87,5 +94,15 @@ object AppModule {
         firebaseFirestore: FirebaseFirestore
     ): FirestoreService = FirestoreRepository(
         firestore = firebaseFirestore
+    )
+
+    @Provides
+    fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+
+    @Provides
+    fun provideStorageRepository(
+        firebaseStorage: FirebaseStorage
+    ): StorageService = StorageRepository(
+        storage = firebaseStorage
     )
 }

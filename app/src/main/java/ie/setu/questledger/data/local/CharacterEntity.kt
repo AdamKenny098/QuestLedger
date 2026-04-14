@@ -8,6 +8,7 @@ data class CharacterEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val email: String = "",
     val name: String,
+    val imageUri: String = "",
     val characterClass: String,
     val race: String,
     val level: Int,

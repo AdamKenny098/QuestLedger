@@ -7,5 +7,6 @@ data class CharacterModel(
     val race: String = "",
     val level: Int = 1,
     val notes: String = "",
-    var email: String = ""
+    var email: String = "",
+    var imageUri: String = ""
 )

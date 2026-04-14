@@ -1,5 +1,6 @@
 package ie.setu.questledger.ui.screens.details
 
+import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -7,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.firestore.FirestoreService
+import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.models.CharacterModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -15,6 +17,7 @@ import javax.inject.Inject
 class CharacterDetailsViewModel @Inject constructor(
     private val repository: FirestoreService,
     private val authService: AuthService,
+    private val storageService: StorageService,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -45,12 +48,20 @@ class CharacterDetailsViewModel @Inject constructor(
         characterClass: String,
         race: String,
         level: Int,
-        notes: String
+        notes: String,
+        imageUri: Uri?
     ) {
         viewModelScope.launch {
             try {
                 isLoading.value = true
                 isErr.value = false
+
+                val uploadedImageUri =
+                    if (imageUri != null) {
+                        storageService.uploadFile(imageUri, "characters").toString()
+                    } else {
+                        character.value.imageUri
+                    }
 
                 val updatedCharacter = character.value.copy(
                     email = authService.email,
@@ -58,7 +69,8 @@ class CharacterDetailsViewModel @Inject constructor(
                     characterClass = characterClass,
                     race = race,
                     level = level,
-                    notes = notes
+                    notes = notes,
+                    imageUri = uploadedImageUri
                 )
 
                 repository.update(authService.email, updatedCharacter)

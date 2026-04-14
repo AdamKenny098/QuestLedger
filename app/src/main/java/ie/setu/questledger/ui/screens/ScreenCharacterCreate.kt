@@ -1,5 +1,6 @@
 package ie.setu.questledger.ui.screens
 
+import android.net.Uri
 import android.widget.NumberPicker
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.screens.create.CreateViewModel
 
 @Composable
@@ -33,6 +35,7 @@ fun ScreenCharacterCreate() {
     var level by remember { mutableStateOf(1) }
     var notes by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -111,6 +114,10 @@ fun ScreenCharacterCreate() {
 
             Spacer(Modifier.height(12.dp))
 
+            ShowPhotoPicker(
+                onPhotoUriChanged = { selectedImageUri = it }
+            )
+
             error?.let {
                 Text(
                     text = it,
@@ -133,7 +140,8 @@ fun ScreenCharacterCreate() {
                                 characterClass = characterClass.trim(),
                                 race = race.trim(),
                                 level = level,
-                                notes = notes.trim()
+                                notes = notes.trim(),
+                                imageUri = selectedImageUri
                             )
 
                             name = ""

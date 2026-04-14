@@ -82,6 +82,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.7.2")
     implementation("androidx.room:room-ktx:2.7.2")
     implementation("com.google.firebase:firebase-auth:23.0.0")
+    implementation(libs.firebase.storage)
     kapt("androidx.room:room-compiler:2.7.2")
 
     implementation("com.google.dagger:hilt-android:2.51.1")
