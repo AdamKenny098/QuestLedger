@@ -31,9 +31,13 @@ import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.screens.create.CreateViewModel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import ie.setu.questledger.ui.screens.create.CompendiumPreviewViewModel
 @Composable
 fun ScreenCharacterCreate() {
     val vm: CreateViewModel = hiltViewModel()
+    val compendiumVm: CompendiumPreviewViewModel = hiltViewModel()
+    val races = remember { compendiumVm.getRaces() }
+    val classes = remember { compendiumVm.getClasses() }
 
     var name by remember { mutableStateOf("") }
     var characterClass by remember { mutableStateOf("") }
@@ -75,6 +79,17 @@ fun ScreenCharacterCreate() {
         ) {
 
             Text("Create Character", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(12.dp))
+
+            Text("Loaded races: ${races.size}")
+            Text("Loaded classes: ${classes.size}")
+
+            Spacer(Modifier.height(8.dp))
+
+            Text("Race sample: ${races.joinToString { it.name }}")
+            Spacer(Modifier.height(4.dp))
+            Text("Class sample: ${classes.joinToString { it.name }}")
+
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(

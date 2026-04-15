@@ -25,6 +25,8 @@ import ie.setu.questledger.data.firestore.QuestFirestoreRepository
 import ie.setu.questledger.data.firestore.QuestFirestoreService
 import ie.setu.questledger.data.storage.StorageRepository
 import ie.setu.questledger.data.storage.StorageService
+import ie.setu.questledger.data.compendium.CompendiumRepository
+import ie.setu.questledger.data.compendium.CompendiumService
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -112,4 +114,7 @@ object AppModule {
     fun provideQuestFirestoreService(
         firestore: FirebaseFirestore
     ): QuestFirestoreService = QuestFirestoreRepository(firestore)
+
+    @Provides
+    fun provideCompendiumService(): CompendiumService = CompendiumRepository()
 }
