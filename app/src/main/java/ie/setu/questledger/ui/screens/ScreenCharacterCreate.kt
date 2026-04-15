@@ -23,12 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.ui.components.general.AbilityScoreField
+import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.screens.create.CreateViewModel
 
 @Composable
 fun ScreenCharacterCreate() {
-    val vm : CreateViewModel = hiltViewModel()
+    val vm: CreateViewModel = hiltViewModel()
+
     var name by remember { mutableStateOf("") }
     var characterClass by remember { mutableStateOf("") }
     var race by remember { mutableStateOf("") }
@@ -36,6 +41,27 @@ fun ScreenCharacterCreate() {
     var notes by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    var strengthText by remember { mutableStateOf("10") }
+    var dexterityText by remember { mutableStateOf("10") }
+    var constitutionText by remember { mutableStateOf("10") }
+    var intelligenceText by remember { mutableStateOf("10") }
+    var wisdomText by remember { mutableStateOf("10") }
+    var charismaText by remember { mutableStateOf("10") }
+
+    val previewCharacter = CharacterModel(
+        name = name,
+        characterClass = characterClass,
+        race = race,
+        level = level,
+        notes = notes,
+        strength = strengthText.toIntOrNull() ?: 10,
+        dexterity = dexterityText.toIntOrNull() ?: 10,
+        constitution = constitutionText.toIntOrNull() ?: 10,
+        intelligence = intelligenceText.toIntOrNull() ?: 10,
+        wisdom = wisdomText.toIntOrNull() ?: 10,
+        charisma = charismaText.toIntOrNull() ?: 10
+    )
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -53,6 +79,7 @@ fun ScreenCharacterCreate() {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(Modifier.height(10.dp))
 
             OutlinedTextField(
@@ -62,6 +89,7 @@ fun ScreenCharacterCreate() {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(Modifier.height(10.dp))
 
             OutlinedTextField(
@@ -71,6 +99,7 @@ fun ScreenCharacterCreate() {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(Modifier.height(12.dp))
 
             Text("Level (1–20)", style = MaterialTheme.typography.titleMedium)
@@ -114,9 +143,46 @@ fun ScreenCharacterCreate() {
 
             Spacer(Modifier.height(12.dp))
 
+            selectedImageUri?.let { uri ->
+                AsyncImage(
+                    model = uri,
+                    contentDescription = "Selected Character Image",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+
             ShowPhotoPicker(
                 onPhotoUriChanged = { selectedImageUri = it }
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text("Ability Scores", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(10.dp))
+
+            AbilityScoreField("Strength", strengthText, { strengthText = it })
+            Spacer(Modifier.height(8.dp))
+
+            AbilityScoreField("Dexterity", dexterityText, { dexterityText = it })
+            Spacer(Modifier.height(8.dp))
+
+            AbilityScoreField("Constitution", constitutionText, { constitutionText = it })
+            Spacer(Modifier.height(8.dp))
+
+            AbilityScoreField("Intelligence", intelligenceText, { intelligenceText = it })
+            Spacer(Modifier.height(8.dp))
+
+            AbilityScoreField("Wisdom", wisdomText, { wisdomText = it })
+            Spacer(Modifier.height(8.dp))
+
+            AbilityScoreField("Charisma", charismaText, { charismaText = it })
+
+            Spacer(Modifier.height(16.dp))
+
+            CharacterDerivedStatsCard(character = previewCharacter)
+
+            Spacer(Modifier.height(12.dp))
 
             error?.let {
                 Text(
@@ -128,11 +194,20 @@ fun ScreenCharacterCreate() {
 
             Button(
                 onClick = {
+                    val str = strengthText.toIntOrNull()
+                    val dex = dexterityText.toIntOrNull()
+                    val con = constitutionText.toIntOrNull()
+                    val intScore = intelligenceText.toIntOrNull()
+                    val wis = wisdomText.toIntOrNull()
+                    val cha = charismaText.toIntOrNull()
+
                     when {
                         name.isBlank() -> error = "Name is required"
                         characterClass.isBlank() -> error = "Class is required"
                         race.isBlank() -> error = "Race is required"
                         level !in 1..20 -> error = "Level must be between 1 and 20"
+                        listOf(str, dex, con, intScore, wis, cha).any { it == null || it !in 1..20 } ->
+                            error = "All ability scores must be between 1 and 20"
                         else -> {
                             error = null
                             vm.addCharacter(
@@ -141,7 +216,13 @@ fun ScreenCharacterCreate() {
                                 race = race.trim(),
                                 level = level,
                                 notes = notes.trim(),
-                                imageUri = selectedImageUri
+                                imageUri = selectedImageUri,
+                                strength = str!!,
+                                dexterity = dex!!,
+                                constitution = con!!,
+                                intelligence = intScore!!,
+                                wisdom = wis!!,
+                                charisma = cha!!
                             )
 
                             name = ""
@@ -149,6 +230,13 @@ fun ScreenCharacterCreate() {
                             race = ""
                             level = 1
                             notes = ""
+                            selectedImageUri = null
+                            strengthText = "10"
+                            dexterityText = "10"
+                            constitutionText = "10"
+                            intelligenceText = "10"
+                            wisdomText = "10"
+                            charismaText = "10"
                         }
                     }
                 },
@@ -158,10 +246,6 @@ fun ScreenCharacterCreate() {
             }
 
             Spacer(Modifier.height(8.dp))
-
-            Spacer(Modifier.height(8.dp))
-
-
         }
     }
 }

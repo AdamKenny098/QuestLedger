@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.firestore.FirestoreService
+import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.models.CharacterModel
 import kotlinx.coroutines.launch
@@ -29,7 +30,13 @@ class CreateViewModel @Inject constructor(
         race: String,
         level: Int,
         notes: String,
-        imageUri: Uri?
+        imageUri: Uri?,
+        strength: Int,
+        dexterity: Int,
+        constitution: Int,
+        intelligence: Int,
+        wisdom: Int,
+        charisma: Int
     ) {
         viewModelScope.launch {
             try {
@@ -43,17 +50,29 @@ class CreateViewModel @Inject constructor(
                         ""
                     }
 
-                val character = CharacterModel(
+                val baseCharacter = CharacterModel(
                     name = name,
                     characterClass = characterClass,
                     race = race,
                     level = level,
                     notes = notes,
                     email = authService.email,
-                    imageUri = uploadedImageUri
+                    imageUri = uploadedImageUri,
+                    strength = strength,
+                    dexterity = dexterity,
+                    constitution = constitution,
+                    intelligence = intelligence,
+                    wisdom = wisdom,
+                    charisma = charisma
                 )
 
-                repository.insert(authService.email, character)
+                val derived = CharacterStatEngine.build(baseCharacter)
+
+                val finalCharacter = baseCharacter.copy(
+                    currentHp = derived.maxHp
+                )
+
+                repository.insert(authService.email, finalCharacter)
 
                 isLoading.value = false
             } catch (e: Exception) {
