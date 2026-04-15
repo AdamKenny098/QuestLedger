@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.firestore.FirestoreService
+import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.models.CharacterModel
 import kotlinx.coroutines.launch
@@ -49,6 +50,12 @@ class CharacterDetailsViewModel @Inject constructor(
         race: String,
         level: Int,
         notes: String,
+        strength: Int,
+        dexterity: Int,
+        constitution: Int,
+        intelligence: Int,
+        wisdom: Int,
+        charisma: Int,
         imageUri: Uri?,
         onSuccess: () -> Unit
     ) {
@@ -64,14 +71,30 @@ class CharacterDetailsViewModel @Inject constructor(
                         character.value.imageUri
                     }
 
-                val updatedCharacter = character.value.copy(
+                val baseCharacter = character.value.copy(
                     email = authService.email,
                     name = name,
                     characterClass = characterClass,
                     race = race,
                     level = level,
                     notes = notes,
-                    imageUri = uploadedImageUri
+                    imageUri = uploadedImageUri,
+                    strength = strength,
+                    dexterity = dexterity,
+                    constitution = constitution,
+                    intelligence = intelligence,
+                    wisdom = wisdom,
+                    charisma = charisma
+                )
+
+                val derived = CharacterStatEngine.build(baseCharacter)
+
+                val updatedCharacter = baseCharacter.copy(
+                    currentHp = when {
+                        character.value.currentHp <= 0 -> derived.maxHp
+                        character.value.currentHp > derived.maxHp -> derived.maxHp
+                        else -> character.value.currentHp
+                    }
                 )
 
                 repository.update(authService.email, updatedCharacter)
@@ -86,5 +109,4 @@ class CharacterDetailsViewModel @Inject constructor(
             }
         }
     }
-
 }

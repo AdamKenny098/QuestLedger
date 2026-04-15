@@ -44,6 +44,7 @@ import ie.setu.questledger.models.CharacterModel
 import ie.setu.questledger.ui.components.general.ShowError
 import ie.setu.questledger.ui.screens.roster.RosterSort
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
+import ie.setu.questledger.data.rules.CharacterStatEngine
 
 @Composable
 fun ScreenRoster(onOpenDetails: (String) -> Unit) {
@@ -120,7 +121,9 @@ fun ScreenRoster(onOpenDetails: (String) -> Unit) {
                 return@Column
             }
 
-            LazyColumn {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
                 items(
                     items = characters,
                     key = { it.id }
@@ -132,13 +135,17 @@ fun ScreenRoster(onOpenDetails: (String) -> Unit) {
                     )
                     Spacer(Modifier.height(16.dp))
                 }
-            }
 
-            FilledTonalButton(
-                onClick = { vm.deleteAll() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Delete All")
+                item {
+                    FilledTonalButton(
+                        onClick = { vm.deleteAll() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Delete All")
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+                }
             }
         }
     }
@@ -183,13 +190,46 @@ private fun CharacterCard(
         )
 
         if (expanded) {
+            val derived = CharacterStatEngine.build(c)
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = "STR ${c.strength} (${formatMod(derived.strMod)})  " +
+                        "DEX ${c.dexterity} (${formatMod(derived.dexMod)})  " +
+                        "CON ${c.constitution} (${formatMod(derived.conMod)})",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = "INT ${c.intelligence} (${formatMod(derived.intMod)})  " +
+                        "WIS ${c.wisdom} (${formatMod(derived.wisMod)})  " +
+                        "CHA ${c.charisma} (${formatMod(derived.chaMod)})",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = "HP ${c.currentHp}/${derived.maxHp}  •  AC ${derived.armourClass}  •  Prof ${formatMod(derived.proficiencyBonus)}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = "Initiative ${formatMod(derived.initiativeBonus)}  •  Carry ${derived.carryCapacity}  •  Hit Die d${derived.hitDie}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
             if (c.notes.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = "Notes: ${c.notes}",
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    style = MaterialTheme.typography.bodyMedium
                 )
-            } else {
-                Spacer(Modifier.height(16.dp))
             }
         }
 
@@ -208,4 +248,8 @@ private fun CharacterCard(
             }
         }
     }
+}
+
+private fun formatMod(value: Int): String {
+    return if (value >= 0) "+$value" else value.toString()
 }

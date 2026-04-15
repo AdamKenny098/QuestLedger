@@ -41,6 +41,6 @@ fun ShowPhotoPicker(
             )
         }
     ) {
-        Text("Change Profile Photo")
+        Text("Choose Image")
     }
 }

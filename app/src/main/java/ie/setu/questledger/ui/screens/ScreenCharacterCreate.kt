@@ -29,7 +29,8 @@ import ie.setu.questledger.ui.components.general.AbilityScoreField
 import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.screens.create.CreateViewModel
-
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 @Composable
 fun ScreenCharacterCreate() {
     val vm: CreateViewModel = hiltViewModel()
@@ -67,7 +68,11 @@ fun ScreenCharacterCreate() {
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
 
             Text("Create Character", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
