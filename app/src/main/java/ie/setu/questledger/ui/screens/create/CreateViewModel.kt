@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
+import ie.setu.questledger.data.compendium.ClassDefinition
+import ie.setu.questledger.data.compendium.CompendiumService
+import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.firestore.FirestoreService
 import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.data.storage.StorageService
@@ -17,12 +20,16 @@ import javax.inject.Inject
 class CreateViewModel @Inject constructor(
     private val repository: FirestoreService,
     private val authService: AuthService,
-    private val storageService: StorageService
+    private val storageService: StorageService,
+    private val compendiumService: CompendiumService
 ) : ViewModel() {
 
     var isErr = mutableStateOf(false)
     var error = mutableStateOf(Exception())
     var isLoading = mutableStateOf(false)
+
+    fun getRaces(): List<RaceDefinition> = compendiumService.getRaces()
+    fun getClasses(): List<ClassDefinition> = compendiumService.getClasses()
 
     fun addCharacter(
         name: String,

@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -19,29 +21,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import ie.setu.questledger.data.compendium.CompendiumLookup
 import ie.setu.questledger.models.CharacterModel
 import ie.setu.questledger.ui.components.general.AbilityScoreField
 import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
+import ie.setu.questledger.ui.components.general.CompendiumDropdown
+import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.screens.create.CreateViewModel
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import ie.setu.questledger.ui.screens.create.CompendiumPreviewViewModel
 @Composable
 fun ScreenCharacterCreate() {
     val vm: CreateViewModel = hiltViewModel()
-    val compendiumVm: CompendiumPreviewViewModel = hiltViewModel()
-    val races = remember { compendiumVm.getRaces() }
-    val classes = remember { compendiumVm.getClasses() }
+
+    val races = remember { vm.getRaces() }
+    val classes = remember { vm.getClasses() }
 
     var name by remember { mutableStateOf("") }
-    var characterClass by remember { mutableStateOf("") }
-    var race by remember { mutableStateOf("") }
+    var selectedClassId by remember { mutableStateOf(classes.firstOrNull()?.id.orEmpty()) }
+    var selectedRaceId by remember { mutableStateOf(races.firstOrNull()?.id.orEmpty()) }
     var level by remember { mutableStateOf(1) }
     var notes by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -54,10 +56,19 @@ fun ScreenCharacterCreate() {
     var wisdomText by remember { mutableStateOf("10") }
     var charismaText by remember { mutableStateOf("10") }
 
+    val selectedRace = remember(selectedRaceId) {
+        races.firstOrNull { it.id == selectedRaceId }
+    }
+
+    val selectedClass = remember(selectedClassId) {
+        classes.firstOrNull { it.id == selectedClassId }
+    }
+
+
     val previewCharacter = CharacterModel(
         name = name,
-        characterClass = characterClass,
-        race = race,
+        characterClass = selectedClassId,
+        race = selectedRaceId,
         level = level,
         notes = notes,
         strength = strengthText.toIntOrNull() ?: 10,
@@ -81,17 +92,6 @@ fun ScreenCharacterCreate() {
             Text("Create Character", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
 
-            Text("Loaded races: ${races.size}")
-            Text("Loaded classes: ${classes.size}")
-
-            Spacer(Modifier.height(8.dp))
-
-            Text("Race sample: ${races.joinToString { it.name }}")
-            Spacer(Modifier.height(4.dp))
-            Text("Class sample: ${classes.joinToString { it.name }}")
-
-            Spacer(Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -102,25 +102,47 @@ fun ScreenCharacterCreate() {
 
             Spacer(Modifier.height(10.dp))
 
-            OutlinedTextField(
-                value = characterClass,
-                onValueChange = { characterClass = it },
-                label = { Text("Class") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            CompendiumDropdown(
+                label = "Class",
+                options = classes.map { CompendiumOption(it.id, it.name) },
+                selectedId = selectedClassId,
+                onSelected = { selectedClassId = it }
             )
+
+            selectedClass?.let { classDef ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Hit Die: d${classDef.hitDie} • Primary Stats: ${CompendiumLookup.formatAbilityList(classDef.primaryStats)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Spellcasting: ${classDef.spellcastingAbility?.let { CompendiumLookup.abilityLabel(it) } ?: "None"}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             Spacer(Modifier.height(10.dp))
 
-            OutlinedTextField(
-                value = race,
-                onValueChange = { race = it },
-                label = { Text("Race") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            CompendiumDropdown(
+                label = "Race",
+                options = classes.map { CompendiumOption(it.id, it.name) },
+                selectedId = selectedRaceId,
+                onSelected = { selectedRaceId = it }
             )
 
-            Spacer(Modifier.height(12.dp))
+            selectedRace?.let { raceDef ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = raceDef.description,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Bonuses: ${CompendiumLookup.formatStatBonuses(raceDef.statBonuses)} • Speed: ${raceDef.speed}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
 
             Text("Level (1–20)", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
@@ -223,8 +245,8 @@ fun ScreenCharacterCreate() {
 
                     when {
                         name.isBlank() -> error = "Name is required"
-                        characterClass.isBlank() -> error = "Class is required"
-                        race.isBlank() -> error = "Race is required"
+                        selectedClassId.isBlank() -> error = "Class is required"
+                        selectedRaceId.isBlank() -> error = "Race is required"
                         level !in 1..20 -> error = "Level must be between 1 and 20"
                         listOf(str, dex, con, intScore, wis, cha).any { it == null || it !in 1..20 } ->
                             error = "All ability scores must be between 1 and 20"
@@ -232,8 +254,8 @@ fun ScreenCharacterCreate() {
                             error = null
                             vm.addCharacter(
                                 name = name.trim(),
-                                characterClass = characterClass.trim(),
-                                race = race.trim(),
+                                characterClass = selectedClassId,
+                                race = selectedRaceId,
                                 level = level,
                                 notes = notes.trim(),
                                 imageUri = selectedImageUri,
@@ -246,8 +268,8 @@ fun ScreenCharacterCreate() {
                             )
 
                             name = ""
-                            characterClass = ""
-                            race = ""
+                            selectedClassId = ""
+                            selectedRaceId = ""
                             level = 1
                             notes = ""
                             selectedImageUri = null
