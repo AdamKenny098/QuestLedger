@@ -23,9 +23,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import ie.setu.questledger.data.compendium.CompendiumLookup
 import ie.setu.questledger.models.CharacterModel
 import ie.setu.questledger.ui.components.general.AbilityScoreField
 import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
+import ie.setu.questledger.ui.components.general.CompendiumDropdown
+import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 
 @Composable
@@ -35,9 +38,16 @@ fun ScreenCharacterDetails(
     val vm: CharacterDetailsViewModel = hiltViewModel()
     val c = vm.character.value
 
+    val races = remember { vm.getRaces() }
+    val classes = remember { vm.getClasses() }
+
     var name by remember(c.id) { mutableStateOf(c.name) }
-    var characterClass by remember(c.id) { mutableStateOf(c.characterClass) }
-    var race by remember(c.id) { mutableStateOf(c.race) }
+    var selectedClassId by remember(c.id) {
+        mutableStateOf(CompendiumLookup.findClass(c.characterClass)?.id ?: c.characterClass)
+    }
+    var selectedRaceId by remember(c.id) {
+        mutableStateOf(CompendiumLookup.findRace(c.race)?.id ?: c.race)
+    }
     var levelText by remember(c.id) { mutableStateOf(c.level.toString()) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedImageUri by remember(c.id) { mutableStateOf<Uri?>(null) }
@@ -65,12 +75,20 @@ fun ScreenCharacterDetails(
         selectedImageUri = null
     }
 
+    val selectedRace = remember(selectedRaceId) {
+        races.firstOrNull { it.id == selectedRaceId }
+    }
+
+    val selectedClass = remember(selectedClassId) {
+        classes.firstOrNull { it.id == selectedClassId }
+    }
+
     val previewCharacter = CharacterModel(
         id = c.id,
         email = c.email,
         name = name,
-        characterClass = characterClass,
-        race = race,
+        characterClass = selectedClassId,
+        race = selectedRaceId,
         level = levelText.toIntOrNull() ?: 1,
         notes = text,
         imageUri = c.imageUri,
@@ -100,7 +118,7 @@ fun ScreenCharacterDetails(
             if (selectedImageUri != null || c.imageUri.isNotBlank()) {
                 AsyncImage(
                     model = selectedImageUri ?: c.imageUri,
-                    contentDescription = "Character Image",
+                    contentDescription = "Choose Character Image",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -127,23 +145,46 @@ fun ScreenCharacterDetails(
 
             Spacer(Modifier.height(10.dp))
 
-            OutlinedTextField(
-                value = characterClass,
-                onValueChange = { characterClass = it },
-                label = { Text("Class") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            CompendiumDropdown(
+                label = "Class",
+                options = classes.map { CompendiumOption(it.id, it.name) },
+                selectedId = selectedClassId,
+                onSelected = { selectedClassId = it }
             )
+
+            selectedClass?.let { classDef ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Hit Die: d${classDef.hitDie} • Primary Stats: ${CompendiumLookup.formatAbilityList(classDef.primaryStats)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Spellcasting: ${classDef.spellcastingAbility?.let { CompendiumLookup.abilityLabel(it) } ?: "None"}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             Spacer(Modifier.height(10.dp))
 
-            OutlinedTextField(
-                value = race,
-                onValueChange = { race = it },
-                label = { Text("Race") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            CompendiumDropdown(
+                label = "Race",
+                options = races.map { CompendiumOption(it.id, it.name) },
+                selectedId = selectedRaceId,
+                onSelected = { selectedRaceId = it }
             )
+
+            selectedRace?.let { raceDef ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = raceDef.description,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Bonuses: ${CompendiumLookup.formatStatBonuses(raceDef.statBonuses)} • Speed: ${raceDef.speed}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
 
             Spacer(Modifier.height(10.dp))
 
@@ -187,8 +228,6 @@ fun ScreenCharacterDetails(
                 value = text,
                 onValueChange = {
                     text = it
-                    onNotesChanged = true
-
                     val trimmed = it.trim()
                     isEmptyError = trimmed.isEmpty()
                     isShortError = trimmed.isNotEmpty() && trimmed.length < 2
@@ -228,8 +267,8 @@ fun ScreenCharacterDetails(
 
                     when {
                         name.isBlank() -> error = "Name is required"
-                        characterClass.isBlank() -> error = "Class is required"
-                        race.isBlank() -> error = "Race is required"
+                        selectedClassId.isBlank() -> error = "Class is required"
+                        selectedRaceId.isBlank() -> error = "Race is required"
                         level == null || level !in 1..20 -> error = "Level must be 1–20"
                         listOf(str, dex, con, intScore, wis, cha).any { it == null || it !in 1..20 } ->
                             error = "All ability scores must be between 1 and 20"
@@ -237,8 +276,8 @@ fun ScreenCharacterDetails(
                             error = null
                             vm.updateCharacter(
                                 name = name.trim(),
-                                characterClass = characterClass.trim(),
-                                race = race.trim(),
+                                characterClass = selectedClassId.trim(),
+                                race = selectedRaceId.trim(),
                                 level = level,
                                 notes = trimmedNotes,
                                 strength = str!!,

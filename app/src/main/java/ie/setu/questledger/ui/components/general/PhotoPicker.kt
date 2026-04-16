@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun ShowPhotoPicker(
+    buttonText: String = "Choose Image",
     onPhotoUriChanged: (Uri) -> Unit
 ) {
     val context = LocalContext.current
@@ -41,6 +42,6 @@ fun ShowPhotoPicker(
             )
         }
     ) {
-        Text("Choose Image")
+        Text(buttonText)
     }
 }

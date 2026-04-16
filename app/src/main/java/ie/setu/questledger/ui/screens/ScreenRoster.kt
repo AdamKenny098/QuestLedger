@@ -45,6 +45,7 @@ import ie.setu.questledger.ui.components.general.ShowError
 import ie.setu.questledger.ui.screens.roster.RosterSort
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
 import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.compendium.CompendiumLookup
 
 @Composable
 fun ScreenRoster(onOpenDetails: (String) -> Unit) {
@@ -181,7 +182,7 @@ private fun CharacterCard(
         }
 
         Text(
-            text = "${c.name} — ${c.race} ${c.characterClass} (Lv ${c.level})",
+            text = "${c.name} — ${CompendiumLookup.raceDisplayName(c.race)} ${CompendiumLookup.classDisplayName(c.characterClass)} (Lv ${c.level})",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .fillMaxWidth()
@@ -195,18 +196,18 @@ private fun CharacterCard(
             Spacer(Modifier.height(12.dp))
 
             Text(
-                text = "STR ${c.strength} (${formatMod(derived.strMod)})  " +
-                        "DEX ${c.dexterity} (${formatMod(derived.dexMod)})  " +
-                        "CON ${c.constitution} (${formatMod(derived.conMod)})",
+                text = "STR ${derived.strengthScore} (${formatMod(derived.strMod)})  " +
+                        "DEX ${derived.dexterityScore} (${formatMod(derived.dexMod)})  " +
+                        "CON ${derived.constitutionScore} (${formatMod(derived.conMod)})",
                 style = MaterialTheme.typography.bodyMedium
             )
 
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "INT ${c.intelligence} (${formatMod(derived.intMod)})  " +
-                        "WIS ${c.wisdom} (${formatMod(derived.wisMod)})  " +
-                        "CHA ${c.charisma} (${formatMod(derived.chaMod)})",
+                text = "INT ${derived.intelligenceScore} (${formatMod(derived.intMod)})  " +
+                        "WIS ${derived.wisdomScore} (${formatMod(derived.wisMod)})  " +
+                        "CHA ${derived.charismaScore} (${formatMod(derived.chaMod)})",
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -220,7 +221,7 @@ private fun CharacterCard(
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "Initiative ${formatMod(derived.initiativeBonus)}  •  Carry ${derived.carryCapacity}  •  Hit Die d${derived.hitDie}",
+                text = "Initiative ${formatMod(derived.initiativeBonus)}  •  Speed ${derived.speed}  •  Carry ${derived.carryCapacity}",
                 style = MaterialTheme.typography.bodyMedium
             )
 
