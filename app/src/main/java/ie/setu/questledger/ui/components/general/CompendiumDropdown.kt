@@ -1,14 +1,10 @@
 package ie.setu.questledger.ui.components.general
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,6 +18,7 @@ data class CompendiumOption(
     val label: String
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompendiumDropdown(
     label: String,
@@ -32,23 +29,25 @@ fun CompendiumDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val selectedLabel = options.firstOrNull { it.id == selectedId }?.label.orEmpty()
+    val selectedLabel = options.firstOrNull { it.id == selectedId }?.label ?: ""
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
         OutlinedTextField(
             value = selectedLabel,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
             trailingIcon = {
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = label)
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
+            modifier = Modifier.menuAnchor()
         )
 
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

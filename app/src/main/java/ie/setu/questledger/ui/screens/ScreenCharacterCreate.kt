@@ -125,7 +125,7 @@ fun ScreenCharacterCreate() {
 
             CompendiumDropdown(
                 label = "Race",
-                options = classes.map { CompendiumOption(it.id, it.name) },
+                options = races.map { CompendiumOption(it.id, it.name) },
                 selectedId = selectedRaceId,
                 onSelected = { selectedRaceId = it }
             )
