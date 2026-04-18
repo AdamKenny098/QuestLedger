@@ -1,6 +1,7 @@
 package ie.setu.questledger.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Map
@@ -42,6 +43,12 @@ object CampaignMap : AppDestination {
     override val icon = Icons.Filled.Map
     override val label = "Map"
     override val route = "campaign_map"
+}
+
+object QuickSetupCharacter : AppDestination {
+    override val icon = Icons.Filled.Add
+    override val label = "Quick Setup"
+    override val route = "quick_setup_character"
 }
 
 val bottomNavDestinations = listOf(Create, Roster, About, Profile, CampaignMap)

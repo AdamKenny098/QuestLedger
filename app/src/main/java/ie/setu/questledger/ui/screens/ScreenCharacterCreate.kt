@@ -34,8 +34,11 @@ import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.screens.create.CreateViewModel
+import androidx.compose.material3.OutlinedButton
 @Composable
-fun ScreenCharacterCreate() {
+fun ScreenCharacterCreate(
+    onOpenQuickSetup: () -> Unit = {}
+) {
     val vm: CreateViewModel = hiltViewModel()
 
     val races = remember { vm.getRaces() }
@@ -90,6 +93,16 @@ fun ScreenCharacterCreate() {
         ) {
 
             Text("Create Character", style = MaterialTheme.typography.titleLarge)
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onOpenQuickSetup,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Use Quick Setup Instead")
+            }
+
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
@@ -268,8 +281,8 @@ fun ScreenCharacterCreate() {
                             )
 
                             name = ""
-                            selectedClassId = ""
-                            selectedRaceId = ""
+                            selectedClassId = classes.firstOrNull()?.id.orEmpty()
+                            selectedRaceId = races.firstOrNull()?.id.orEmpty()
                             level = 1
                             notes = ""
                             selectedImageUri = null
