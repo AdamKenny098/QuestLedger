@@ -27,6 +27,8 @@ import ie.setu.questledger.data.storage.StorageRepository
 import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.data.compendium.CompendiumRepository
 import ie.setu.questledger.data.compendium.CompendiumService
+import ie.setu.questledger.data.premade.PremadeTemplateRepository
+import ie.setu.questledger.data.premade.PremadeTemplateService
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -117,4 +119,7 @@ object AppModule {
 
     @Provides
     fun provideCompendiumService(): CompendiumService = CompendiumRepository()
+
+    @Provides
+    fun providePremadeTemplateService(): PremadeTemplateService = PremadeTemplateRepository()
 }
