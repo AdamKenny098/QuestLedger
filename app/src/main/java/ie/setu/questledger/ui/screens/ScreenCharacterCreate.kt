@@ -37,7 +37,8 @@ import ie.setu.questledger.ui.screens.create.CreateViewModel
 import androidx.compose.material3.OutlinedButton
 @Composable
 fun ScreenCharacterCreate(
-    onOpenQuickSetup: () -> Unit = {}
+    onOpenQuickSetup: () -> Unit = {},
+    onOpenPremade: () -> Unit = {}
 ) {
     val vm: CreateViewModel = hiltViewModel()
 
@@ -102,6 +103,17 @@ fun ScreenCharacterCreate(
             ) {
                 Text("Use Quick Setup Instead")
             }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onOpenPremade,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Use Premade Character Instead")
+            }
+
+            Spacer(Modifier.height(12.dp))
 
             Spacer(Modifier.height(12.dp))
 

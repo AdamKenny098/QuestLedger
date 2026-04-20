@@ -23,6 +23,7 @@ import ie.setu.questledger.ui.screens.map.CampaignMapScreen
 import ie.setu.questledger.ui.screens.profile.ScreenProfile
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
 import ie.setu.questledger.ui.screens.quicksetup.ScreenQuickSetupCharacter
+import ie.setu.questledger.ui.screens.premade.ScreenPremadeCharacters
 
 @Composable
 fun QuestLedgerNavHost(
@@ -123,6 +124,9 @@ fun QuestLedgerNavHost(
                 ScreenCharacterCreate(
                     onOpenQuickSetup = {
                         navController.navigate(QuickSetupCharacter.route)
+                    },
+                    onOpenPremade = {
+                        navController.navigate(PremadeCharacters.route)
                     }
                 )
             }
@@ -148,6 +152,13 @@ fun QuestLedgerNavHost(
 
             composable(route = QuickSetupCharacter.route) {
                 ScreenQuickSetupCharacter(
+                    onDone = { navController.popBackStack() },
+                    onOpenManualSetup = { navController.popBackStack() }
+                )
+            }
+
+            composable(route = PremadeCharacters.route) {
+                ScreenPremadeCharacters(
                     onDone = { navController.popBackStack() },
                     onOpenManualSetup = { navController.popBackStack() }
                 )
