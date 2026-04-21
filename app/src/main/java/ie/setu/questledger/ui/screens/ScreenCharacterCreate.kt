@@ -38,7 +38,8 @@ import androidx.compose.material3.OutlinedButton
 @Composable
 fun ScreenCharacterCreate(
     onOpenQuickSetup: () -> Unit = {},
-    onOpenPremade: () -> Unit = {}
+    onOpenPremade: () -> Unit = {},
+    onOpenFullSetup: () -> Unit = {}
 ) {
     val vm: CreateViewModel = hiltViewModel()
 
@@ -113,7 +114,14 @@ fun ScreenCharacterCreate(
                 Text("Use Premade Character Instead")
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onOpenFullSetup,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Use Full Setup Instead")
+            }
 
             Spacer(Modifier.height(12.dp))
 

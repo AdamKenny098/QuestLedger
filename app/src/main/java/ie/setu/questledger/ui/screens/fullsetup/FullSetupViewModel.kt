@@ -29,7 +29,7 @@ class FullSetupViewModel @Inject constructor(
     fun getClasses() = compendiumService.getClasses()
     fun getRaces() = compendiumService.getRaces()
     fun getWeapons() = compendiumService.getWeapons()
-    fun getArmours() = compendiumService.getArmours()
+    fun getArmour() = compendiumService.getArmour()
     fun getSpells() = compendiumService.getSpells()
 
     fun getSuggestedProficienciesForClass(classId: String): List<String> {

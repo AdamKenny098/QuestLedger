@@ -6,7 +6,8 @@ enum class AbilityType {
     CONSTITUTION,
     INTELLIGENCE,
     WISDOM,
-    CHARISMA
+    CHARISMA,
+    NONE
 }
 
 enum class DamageType {

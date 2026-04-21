@@ -57,4 +57,10 @@ object PremadeCharacters : AppDestination {
     override val route = "premade_characters"
 }
 
+object FullSetupCharacter : AppDestination {
+    override val icon = Icons.Filled.Add
+    override val label = "Full Setup"
+    override val route = "full_setup_character"
+}
+
 val bottomNavDestinations = listOf(Create, Roster, About, Profile, CampaignMap)
