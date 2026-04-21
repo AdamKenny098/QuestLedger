@@ -35,6 +35,7 @@ object CompendiumLookup {
             AbilityType.INTELLIGENCE -> "Intelligence"
             AbilityType.WISDOM -> "Wisdom"
             AbilityType.CHARISMA -> "Charisma"
+            AbilityType.NONE -> "None"
         }
     }
 

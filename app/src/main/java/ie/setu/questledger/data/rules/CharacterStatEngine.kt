@@ -89,6 +89,7 @@ object CharacterStatEngine {
             AbilityType.INTELLIGENCE -> intMod
             AbilityType.WISDOM -> wisMod
             AbilityType.CHARISMA -> chaMod
+            AbilityType.NONE -> 0
             null -> 0
         }
 
