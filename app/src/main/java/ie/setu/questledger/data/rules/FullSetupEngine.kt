@@ -62,8 +62,8 @@ class FullSetupEngine @Inject constructor(
         )
 
         val derived = CharacterStatEngine.build(character)
-
         val spellSlotsSummary = formatSpellSlots(clazz, config.level)
+
         val summaryLines = buildList {
             add("Full Setup Build")
             add("Race: ${race.name}")
@@ -80,9 +80,24 @@ class FullSetupEngine @Inject constructor(
             add("Starter Weapon: ${starterWeapon?.name ?: "None"}")
             add("Starter Armour: ${starterArmour?.name ?: "None"}")
             add("Shield: ${if (config.hasShield) "Yes" else "No"}")
+            add("HP Max: ${derived.maxHp}")
+            add("AC: ${derived.armourClass}")
+            add("Melee Attack: ${formatSigned(derived.meleeAttackBonus)}")
+            add("Ranged Attack: ${formatSigned(derived.rangedAttackBonus)}")
+            add("Initiative: ${formatSigned(derived.initiativeBonus)}")
+            add("Passive Perception: ${derived.passivePerception}")
+            add("Carry Capacity: ${derived.carryCapacity}")
+            add("Inventory Capacity: ${derived.inventoryCapacity}")
+            add("Speed: ${derived.speed}")
+            add("Hit Die: d${derived.hitDie}")
 
             if (starterSpells.isNotEmpty()) {
                 add("Starter Spells: ${starterSpells.joinToString { it.name }}")
+            }
+
+            if (derived.spellAttackBonus != 0 || derived.spellSaveDc != 0) {
+                add("Spell Attack: ${formatSigned(derived.spellAttackBonus)}")
+                add("Spell Save DC: ${derived.spellSaveDc}")
             }
 
             add("Spell Slots: $spellSlotsSummary")
@@ -141,5 +156,9 @@ class FullSetupEngine @Inject constructor(
 
     private fun armourBonusFromDefinition(armour: ArmourDefinition): Int {
         return (armour.baseAc - 10).coerceAtLeast(0)
+    }
+
+    private fun formatSigned(value: Int): String {
+        return if (value >= 0) "+$value" else value.toString()
     }
 }

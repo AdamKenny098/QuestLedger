@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -29,11 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import ie.setu.questledger.data.compendium.ArmourDefinition
-import ie.setu.questledger.data.compendium.ClassDefinition
-import ie.setu.questledger.data.compendium.RaceDefinition
-import ie.setu.questledger.data.compendium.SpellDefinition
-import ie.setu.questledger.data.compendium.WeaponDefinition
 import ie.setu.questledger.models.FullSetupConfig
 import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
 
@@ -72,7 +68,7 @@ fun ScreenFullSetup(
     var hasShield by remember { mutableStateOf(false) }
     val selectedSpellIds = remember { mutableStateListOf<String>() }
 
-    var error by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     val classWeaponIds = remember(selectedClassId) { vm.getSuggestedWeaponIdsForClass(selectedClassId) }
     val classArmourIds = remember(selectedClassId) { vm.getSuggestedArmourIdsForClass(selectedClassId) }
@@ -183,7 +179,7 @@ fun ScreenFullSetup(
                     classes.forEach { clazz ->
                         ChoiceCard(
                             title = clazz.name,
-                            subtitle = clazz.hitDie.toString(),
+                            subtitle = "Hit Die: d${clazz.hitDie}",
                             summary = clazz.primaryStats.toString(),
                             isSelected = clazz.id == selectedClassId,
                             onClick = { selectedClassId = clazz.id }
@@ -320,9 +316,22 @@ fun ScreenFullSetup(
 
             Spacer(Modifier.height(16.dp))
 
-            error?.let {
+            if (vm.isLoading.value) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+            }
+
+            localError?.let {
                 Text(
                     text = it,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (vm.isErr.value && vm.error.value.isNotBlank()) {
+                Text(
+                    text = vm.error.value,
                     color = MaterialTheme.colorScheme.error
                 )
                 Spacer(Modifier.height(8.dp))
@@ -335,6 +344,7 @@ fun ScreenFullSetup(
                 if (step != FullSetupStep.CLASS) {
                     TextButton(
                         onClick = {
+                            localError = null
                             step = when (step) {
                                 FullSetupStep.CLASS -> FullSetupStep.CLASS
                                 FullSetupStep.RACE -> FullSetupStep.CLASS
@@ -357,40 +367,40 @@ fun ScreenFullSetup(
                         onClick = {
                             when (step) {
                                 FullSetupStep.CLASS -> {
-                                    if (selectedClassId.isBlank()) error = "Choose a class"
+                                    if (selectedClassId.isBlank()) localError = "Choose a class"
                                     else {
-                                        error = null
+                                        localError = null
                                         step = FullSetupStep.RACE
                                     }
                                 }
 
                                 FullSetupStep.RACE -> {
-                                    if (selectedRaceId.isBlank()) error = "Choose a race"
+                                    if (selectedRaceId.isBlank()) localError = "Choose a race"
                                     else {
-                                        error = null
+                                        localError = null
                                         step = FullSetupStep.STATS
                                     }
                                 }
 
                                 FullSetupStep.STATS -> {
-                                    error = null
+                                    localError = null
                                     step = FullSetupStep.PROFICIENCIES
                                 }
 
                                 FullSetupStep.PROFICIENCIES -> {
-                                    error = null
+                                    localError = null
                                     step = FullSetupStep.GEAR
                                 }
 
                                 FullSetupStep.GEAR -> {
-                                    error = null
+                                    localError = null
                                     step = FullSetupStep.SPELLS
                                 }
 
                                 FullSetupStep.SPELLS -> {
-                                    if (characterName.isBlank()) error = "Enter a character name"
+                                    if (characterName.isBlank()) localError = "Enter a character name"
                                     else {
-                                        error = null
+                                        localError = null
                                         step = FullSetupStep.REVIEW
                                     }
                                 }
@@ -405,17 +415,18 @@ fun ScreenFullSetup(
                     Button(
                         onClick = {
                             when {
-                                characterName.isBlank() -> error = "Enter a character name"
-                                selectedClassId.isBlank() -> error = "Choose a class"
-                                selectedRaceId.isBlank() -> error = "Choose a race"
+                                characterName.isBlank() -> localError = "Enter a character name"
+                                selectedClassId.isBlank() -> localError = "Choose a class"
+                                selectedRaceId.isBlank() -> localError = "Choose a race"
                                 else -> {
-                                    error = null
+                                    localError = null
                                     vm.saveCharacter(config) {
                                         onDone()
                                     }
                                 }
                             }
-                        }
+                        },
+                        enabled = !vm.isLoading.value
                     ) {
                         Text("Create Character")
                     }
