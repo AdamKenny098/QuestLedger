@@ -31,5 +31,8 @@ data class CharacterDerivedStats(
     val inventoryCapacity: Int,
 
     val speed: Int,
-    val hitDie: Int
+    val hitDie: Int,
+    val weaponName: String?,
+    val damageRoll: String,
+    val spellcastingBlocked: Boolean
 )

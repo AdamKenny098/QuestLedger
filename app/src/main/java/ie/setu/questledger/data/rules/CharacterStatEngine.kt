@@ -6,6 +6,12 @@ import kotlin.math.floor
 object CharacterStatEngine {
 
     fun build(character: CharacterModel): CharacterDerivedStats {
+        val inventory = character.inventory
+        val equippedWeapon = InventoryEngine.findEquippedWeapon(inventory)
+        val equippedArmour = InventoryEngine.findEquippedArmour(inventory)
+        val equippedOffhand = InventoryEngine.findEquippedOffhand(inventory)
+        val spellFocus = InventoryEngine.findSpellFocus(inventory)
+
         val strMod = abilityModifier(character.strength)
         val dexMod = abilityModifier(character.dexterity)
         val conMod = abilityModifier(character.constitution)
@@ -22,12 +28,16 @@ object CharacterStatEngine {
             conMod = conMod
         )
 
+        val armourBonus = character.armourBonus + (equippedArmour?.armourBonus ?: 0)
+        val shieldBonus = character.shieldBonus + (equippedOffhand?.shieldBonus ?: 0)
+
         val armourClass = calculateArmourClass(
             armourBonus = character.armourBonus,
             shieldBonus = character.shieldBonus,
             dexMod = dexMod
         )
 
+        val weaponAttackBonus = equippedWeapon?.attackBonus ?: 0
         val meleeAttackBonus = proficiencyBonus + strMod
         val rangedAttackBonus = proficiencyBonus + dexMod
 
@@ -38,14 +48,17 @@ object CharacterStatEngine {
             chaMod = chaMod
         )
 
-        val spellAttackBonus = if (spellcastingMod == null) 0 else proficiencyBonus + spellcastingMod
-        val spellSaveDc = if (spellcastingMod == null) 0 else 8 + proficiencyBonus + spellcastingMod
+        val spellcastingBlocked = equippedArmour?.spellcastingBlocked == true
+        val canCast = !spellcastingBlocked
+
+        val spellAttackBonus = if (spellcastingMod == null || !canCast) 0 else proficiencyBonus + spellcastingMod
+        val spellSaveDc = if (spellcastingMod == null || !canCast) 0 else 8 + proficiencyBonus + spellcastingMod
 
         val initiativeBonus = dexMod
         val passivePerception = 10 + wisMod
         val carryCapacity = (character.strength * 15).coerceAtLeast(0)
-        val inventoryCapacity = calculateInventoryCapacity(character.strength, strMod)
-        val speed = speedForRace(character.race)
+        val inventoryCapacity = inventory.capacitySlots
+        val speed = (speedForRace(character.race) - (equippedArmour?.movementPenalty ?: 0)).coerceAtLeast(0)
 
         return CharacterDerivedStats(
             strengthScore = character.strength,
@@ -78,7 +91,11 @@ object CharacterStatEngine {
             inventoryCapacity = inventoryCapacity,
 
             speed = speed,
-            hitDie = hitDie
+            hitDie = hitDie,
+
+            weaponName = equippedWeapon?.name,
+            damageRoll = equippedWeapon?.damageDice ?: "1",
+            spellcastingBlocked = spellcastingBlocked
         )
     }
 
@@ -143,13 +160,6 @@ object CharacterStatEngine {
             "bard", "paladin", "sorcerer", "warlock" -> chaMod
             else -> null
         }
-    }
-
-    private fun calculateInventoryCapacity(
-        strength: Int,
-        strMod: Int
-    ): Int {
-        return (10 + strength + strMod.coerceAtLeast(0)).coerceAtLeast(1)
     }
 
     private fun speedForRace(raceId: String): Int {
