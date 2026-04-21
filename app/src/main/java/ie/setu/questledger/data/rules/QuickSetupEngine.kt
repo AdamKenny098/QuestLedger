@@ -71,6 +71,10 @@ class QuickSetupEngine @Inject constructor(
             add("Starter Weapon: ${starterWeapon?.name ?: "None"}")
             add("Starter Armour: ${starterArmour?.name ?: "None"}")
             add("Shield: ${if (hasShield) "Yes" else "No"}")
+            add("HP Max: ${derived.maxHp}")
+            add("AC: ${derived.armourClass}")
+            add("Initiative: ${if (derived.initiativeBonus >= 0) "+${derived.initiativeBonus}" else derived.initiativeBonus}")
+            add("Passive Perception: ${derived.passivePerception}")
 
             if (starterSpells.isNotEmpty()) {
                 add("Starter Spells: ${starterSpells.joinToString { it.name }}")
