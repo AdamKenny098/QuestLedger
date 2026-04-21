@@ -7,7 +7,11 @@ import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.compendium.SpellDefinition
 import ie.setu.questledger.data.compendium.WeaponDefinition
+import ie.setu.questledger.models.CharacterInventory
 import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.models.EquipmentLoadout
+import ie.setu.questledger.models.InventoryItemModel
+import ie.setu.questledger.models.InventoryItemType
 import ie.setu.questledger.models.QuickSetupConfig
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,6 +49,15 @@ class QuickSetupEngine @Inject constructor(
         val hasShield = hasShieldFor(clazz.id)
         val starterSpells = starterSpellIdsFor(clazz.id).mapNotNull { compendiumService.getSpellById(it) }
 
+        val inventory = buildStarterInventory(
+            characterClassId = clazz.id,
+            starterWeapon = starterWeapon,
+            starterArmour = starterArmour,
+            hasShield = hasShield,
+            starterSpells = starterSpells,
+            strengthScore = scores[AbilityType.STRENGTH] ?: 10
+        )
+
         val character = CharacterModel(
             name = config.name.trim(),
             characterClass = clazz.id,
@@ -57,8 +70,9 @@ class QuickSetupEngine @Inject constructor(
             intelligence = scores[AbilityType.INTELLIGENCE] ?: 10,
             wisdom = scores[AbilityType.WISDOM] ?: 10,
             charisma = scores[AbilityType.CHARISMA] ?: 10,
-            armourBonus = starterArmour?.let { armourBonusFromDefinition(it) } ?: 0,
-            shieldBonus = if (hasShield) 2 else 0
+            armourBonus = 0,
+            shieldBonus = 0,
+            inventory = inventory
         )
 
         val derived = CharacterStatEngine.build(character)
@@ -98,6 +112,103 @@ class QuickSetupEngine @Inject constructor(
             summaryLines = summaryLines
         )
     }
+
+    private fun buildStarterInventory(
+        characterClassId: String,
+        starterWeapon: WeaponDefinition?,
+        starterArmour: ArmourDefinition?,
+        hasShield: Boolean,
+        starterSpells: List<SpellDefinition>,
+        strengthScore: Int
+    ): CharacterInventory {
+        val items = mutableListOf<InventoryItemModel>()
+
+        val weaponItem = starterWeapon?.toInventoryWeapon()
+        if (weaponItem != null) items += weaponItem
+
+        val armourItem = starterArmour?.toInventoryArmour()
+        if (armourItem != null) items += armourItem
+
+        val shieldItem = if (hasShield) {
+            InventoryItemModel(
+                id = "shield_basic",
+                name = "Shield",
+                type = InventoryItemType.SHIELD,
+                slotCost = 2,
+                quantity = 1,
+                shieldBonus = 2
+            )
+        } else null
+        if (shieldItem != null) items += shieldItem
+
+        starterSpells.forEach { spell ->
+            items += InventoryItemModel(
+                id = "spell_${spell.id}",
+                name = spell.name,
+                type = InventoryItemType.BACKPACK_ITEM,
+                slotCost = 0,
+                quantity = 1
+            )
+        }
+
+        val focusItem = when (characterClassId.lowercase()) {
+            "wizard", "cleric" -> InventoryItemModel(
+                id = "${characterClassId}_focus",
+                name = if (characterClassId.equals("wizard", true)) "Arcane Focus" else "Holy Symbol",
+                type = InventoryItemType.SPELL_FOCUS,
+                slotCost = 1,
+                quantity = 1
+            )
+            else -> null
+        }
+        if (focusItem != null) items += focusItem
+
+        val backpackItem = InventoryItemModel(
+            id = "backpack_basic",
+            name = "Backpack",
+            type = InventoryItemType.BACKPACK_ITEM,
+            slotCost = 1,
+            quantity = 1
+        )
+        items += backpackItem
+
+        val capacitySlots = 10 + strengthScore
+
+        return CharacterInventory(
+            capacitySlots = capacitySlots,
+            items = items,
+            equipped = EquipmentLoadout(
+                weaponId = weaponItem?.id,
+                armourId = armourItem?.id,
+                offhandId = shieldItem?.id,
+                spellFocusId = focusItem?.id
+            )
+        )
+    }
+
+    private fun WeaponDefinition.toInventoryWeapon(): InventoryItemModel {
+        return InventoryItemModel(
+            id = id,
+            name = name,
+            type = InventoryItemType.WEAPON,
+            slotCost = 2,
+            quantity = 1,
+            attackBonus = 0,
+            damageDice = damageDice
+        )
+    }
+
+    private fun ArmourDefinition.toInventoryArmour(): InventoryItemModel {
+        return InventoryItemModel(
+            id = id,
+            name = name,
+            type = InventoryItemType.ARMOUR,
+            slotCost = 3,
+            quantity = 1,
+            armourBonus = (baseAc - 10).coerceAtLeast(0)
+        )
+    }
+
 
     private fun generateBaseScores(classId: String): Map<AbilityType, Int> {
         val priority = when (classId.lowercase()) {
@@ -192,9 +303,5 @@ class QuickSetupEngine @Inject constructor(
         return slots.mapIndexedNotNull { index, count ->
             if (count > 0) "L${index + 1} x$count" else null
         }.joinToString(", ")
-    }
-
-    private fun armourBonusFromDefinition(armour: ArmourDefinition): Int {
-        return (armour.baseAc - 10).coerceAtLeast(0)
     }
 }
