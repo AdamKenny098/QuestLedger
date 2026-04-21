@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.models.CharacterModel
 
-
 @Composable
 fun CharacterDerivedStatsCard(
     character: CharacterModel,
@@ -66,9 +65,13 @@ fun CharacterDerivedStatsCard(
             Text("HP Max: ${derived.maxHp}")
             Text("AC: ${derived.armourClass}")
             Text("Prof Bonus: ${fmt(derived.proficiencyBonus)}")
+            Text("Melee Attack: ${fmt(derived.meleeAttackBonus)}")
+            Text("Ranged Attack: ${fmt(derived.rangedAttackBonus)}")
             Text("Initiative: ${fmt(derived.initiativeBonus)}")
+            Text("Passive Perception: ${derived.passivePerception}")
             Text("Speed: ${derived.speed}")
             Text("Carry Capacity: ${derived.carryCapacity}")
+            Text("Inventory Capacity: ${derived.inventoryCapacity}")
             Text("Hit Die: d${derived.hitDie}")
 
             if (derived.spellAttackBonus != 0 || derived.spellSaveDc != 0) {
