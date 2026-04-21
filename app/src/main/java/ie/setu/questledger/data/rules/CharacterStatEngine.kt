@@ -1,126 +1,161 @@
 package ie.setu.questledger.data.rules
 
-import ie.setu.questledger.data.compendium.AbilityType
-import ie.setu.questledger.data.compendium.CompendiumLookup
 import ie.setu.questledger.models.CharacterModel
 import kotlin.math.floor
 
-data class CharacterDerivedStats(
-    val strengthScore: Int,
-    val dexterityScore: Int,
-    val constitutionScore: Int,
-    val intelligenceScore: Int,
-    val wisdomScore: Int,
-    val charismaScore: Int,
-    val strMod: Int,
-    val dexMod: Int,
-    val conMod: Int,
-    val intMod: Int,
-    val wisMod: Int,
-    val chaMod: Int,
-    val proficiencyBonus: Int,
-    val hitDie: Int,
-    val speed: Int,
-    val maxHp: Int,
-    val armourClass: Int,
-    val initiativeBonus: Int,
-    val carryCapacity: Int,
-    val spellAttackBonus: Int,
-    val spellSaveDc: Int
-)
-
 object CharacterStatEngine {
 
-    fun abilityModifier(score: Int): Int {
-        return floor((score - 10) / 2.0).toInt()
-    }
-
-    fun proficiencyBonus(level: Int): Int {
-        return when {
-            level <= 4 -> 2
-            level <= 8 -> 3
-            level <= 12 -> 4
-            level <= 16 -> 5
-            else -> 6
-        }
-    }
-
     fun build(character: CharacterModel): CharacterDerivedStats {
-        val level = character.level.coerceAtLeast(1)
+        val strMod = abilityModifier(character.strength)
+        val dexMod = abilityModifier(character.dexterity)
+        val conMod = abilityModifier(character.constitution)
+        val intMod = abilityModifier(character.intelligence)
+        val wisMod = abilityModifier(character.wisdom)
+        val chaMod = abilityModifier(character.charisma)
 
-        val raceDefinition = CompendiumLookup.findRace(character.race)
-        val classDefinition = CompendiumLookup.findClass(character.characterClass)
+        val proficiencyBonus = proficiencyBonusForLevel(character.level)
+        val hitDie = hitDieForClass(character.characterClass)
 
-        fun raceBonus(ability: AbilityType): Int {
-            return raceDefinition?.statBonuses?.get(ability) ?: 0
-        }
+        val maxHp = calculateMaxHp(
+            level = character.level,
+            hitDie = hitDie,
+            conMod = conMod
+        )
 
-        val strengthScore = (character.strength + raceBonus(AbilityType.STRENGTH)).coerceAtLeast(1)
-        val dexterityScore = (character.dexterity + raceBonus(AbilityType.DEXTERITY)).coerceAtLeast(1)
-        val constitutionScore = (character.constitution + raceBonus(AbilityType.CONSTITUTION)).coerceAtLeast(1)
-        val intelligenceScore = (character.intelligence + raceBonus(AbilityType.INTELLIGENCE)).coerceAtLeast(1)
-        val wisdomScore = (character.wisdom + raceBonus(AbilityType.WISDOM)).coerceAtLeast(1)
-        val charismaScore = (character.charisma + raceBonus(AbilityType.CHARISMA)).coerceAtLeast(1)
+        val armourClass = calculateArmourClass(
+            armourBonus = character.armourBonus,
+            shieldBonus = character.shieldBonus,
+            dexMod = dexMod
+        )
 
-        val strMod = abilityModifier(strengthScore)
-        val dexMod = abilityModifier(dexterityScore)
-        val conMod = abilityModifier(constitutionScore)
-        val intMod = abilityModifier(intelligenceScore)
-        val wisMod = abilityModifier(wisdomScore)
-        val chaMod = abilityModifier(charismaScore)
+        val meleeAttackBonus = proficiencyBonus + strMod
+        val rangedAttackBonus = proficiencyBonus + dexMod
 
-        val proficiency = proficiencyBonus(level)
-        val hitDie = classDefinition?.hitDie ?: 8
-        val speed = raceDefinition?.speed ?: 30
+        val spellcastingMod = spellcastingModifierForClass(
+            classId = character.characterClass,
+            intMod = intMod,
+            wisMod = wisMod,
+            chaMod = chaMod
+        )
 
-        val firstLevelHp = (hitDie + conMod).coerceAtLeast(1)
-        val averagePerLevel = (hitDie / 2 + 1 + conMod).coerceAtLeast(1)
-        val maxHp = firstLevelHp + ((level - 1) * averagePerLevel)
+        val spellAttackBonus = if (spellcastingMod == null) 0 else proficiencyBonus + spellcastingMod
+        val spellSaveDc = if (spellcastingMod == null) 0 else 8 + proficiencyBonus + spellcastingMod
 
-        val armourClass = 10 + dexMod + character.armourBonus + character.shieldBonus
         val initiativeBonus = dexMod
-        val carryCapacity = strengthScore * 15
-
-        val spellcastingAbility = classDefinition?.spellcastingAbility
-        val spellcastingModifier = when (spellcastingAbility) {
-            AbilityType.STRENGTH -> strMod
-            AbilityType.DEXTERITY -> dexMod
-            AbilityType.CONSTITUTION -> conMod
-            AbilityType.INTELLIGENCE -> intMod
-            AbilityType.WISDOM -> wisMod
-            AbilityType.CHARISMA -> chaMod
-            AbilityType.NONE -> 0
-            null -> 0
-        }
-
-        val spellAttackBonus =
-            if (spellcastingAbility == null) 0 else spellcastingModifier + proficiency
-
-        val spellSaveDc =
-            if (spellcastingAbility == null) 0 else 8 + proficiency + spellcastingModifier
+        val passivePerception = 10 + wisMod
+        val carryCapacity = (character.strength * 15).coerceAtLeast(0)
+        val inventoryCapacity = calculateInventoryCapacity(character.strength, strMod)
+        val speed = speedForRace(character.race)
 
         return CharacterDerivedStats(
-            strengthScore = strengthScore,
-            dexterityScore = dexterityScore,
-            constitutionScore = constitutionScore,
-            intelligenceScore = intelligenceScore,
-            wisdomScore = wisdomScore,
-            charismaScore = charismaScore,
+            strengthScore = character.strength,
+            dexterityScore = character.dexterity,
+            constitutionScore = character.constitution,
+            intelligenceScore = character.intelligence,
+            wisdomScore = character.wisdom,
+            charismaScore = character.charisma,
+
             strMod = strMod,
             dexMod = dexMod,
             conMod = conMod,
             intMod = intMod,
             wisMod = wisMod,
             chaMod = chaMod,
-            proficiencyBonus = proficiency,
-            hitDie = hitDie,
-            speed = speed,
+
+            proficiencyBonus = proficiencyBonus,
+
             maxHp = maxHp,
             armourClass = armourClass,
-            initiativeBonus = initiativeBonus,
-            carryCapacity = carryCapacity,
+
+            meleeAttackBonus = meleeAttackBonus,
+            rangedAttackBonus = rangedAttackBonus,
             spellAttackBonus = spellAttackBonus,
-            spellSaveDc = spellSaveDc
+            spellSaveDc = spellSaveDc,
+
+            initiativeBonus = initiativeBonus,
+            passivePerception = passivePerception,
+            carryCapacity = carryCapacity,
+            inventoryCapacity = inventoryCapacity,
+
+            speed = speed,
+            hitDie = hitDie
         )
+    }
+
+    private fun abilityModifier(score: Int): Int {
+        return floor((score - 10) / 2.0).toInt()
+    }
+
+    private fun proficiencyBonusForLevel(level: Int): Int {
+        return when (level.coerceIn(1, 20)) {
+            in 1..4 -> 2
+            in 5..8 -> 3
+            in 9..12 -> 4
+            in 13..16 -> 5
+            else -> 6
+        }
+    }
+
+    private fun hitDieForClass(classId: String): Int {
+        return when (classId.lowercase()) {
+            "fighter", "paladin", "ranger" -> 10
+            "cleric", "druid", "rogue", "bard", "warlock", "monk" -> 8
+            "wizard", "sorcerer" -> 6
+            "barbarian" -> 12
+            else -> 8
+        }
+    }
+
+    private fun calculateMaxHp(
+        level: Int,
+        hitDie: Int,
+        conMod: Int
+    ): Int {
+        val clampedLevel = level.coerceAtLeast(1)
+
+        val firstLevelHp = hitDie + conMod
+        val laterLevelGain = ((hitDie / 2) + 1) + conMod
+
+        return if (clampedLevel == 1) {
+            firstLevelHp.coerceAtLeast(1)
+        } else {
+            (firstLevelHp + ((clampedLevel - 1) * laterLevelGain)).coerceAtLeast(1)
+        }
+    }
+
+    private fun calculateArmourClass(
+        armourBonus: Int,
+        shieldBonus: Int,
+        dexMod: Int
+    ): Int {
+        return 10 + armourBonus + shieldBonus + dexMod
+    }
+
+    private fun spellcastingModifierForClass(
+        classId: String,
+        intMod: Int,
+        wisMod: Int,
+        chaMod: Int
+    ): Int? {
+        return when (classId.lowercase()) {
+            "wizard", "artificer" -> intMod
+            "cleric", "druid", "ranger" -> wisMod
+            "bard", "paladin", "sorcerer", "warlock" -> chaMod
+            else -> null
+        }
+    }
+
+    private fun calculateInventoryCapacity(
+        strength: Int,
+        strMod: Int
+    ): Int {
+        return (10 + strength + strMod.coerceAtLeast(0)).coerceAtLeast(1)
+    }
+
+    private fun speedForRace(raceId: String): Int {
+        return when (raceId.lowercase()) {
+            "dwarf", "halfling", "gnome" -> 25
+            else -> 30
+        }
     }
 }
