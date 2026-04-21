@@ -71,7 +71,7 @@ fun ScreenPremadeCharacters(
                 onClick = onOpenManualSetup,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Use Manual Setup Instead")
+                Text("Back to Setup Menu")
             }
 
             Spacer(Modifier.height(16.dp))
