@@ -17,5 +17,6 @@ data class CharacterModel(
     val charisma: Int = 10,
     val currentHp: Int = 0,
     val armourBonus: Int = 0,
-    val shieldBonus: Int = 0
+    val shieldBonus: Int = 0,
+    val inventory: CharacterInventory = CharacterInventory()
 )
