@@ -30,6 +30,8 @@ import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
 import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
+import ie.setu.questledger.ui.components.general.CharacterEquipmentCard
+import ie.setu.questledger.ui.components.general.CharacterInventoryCard
 
 @Composable
 fun ScreenCharacterDetails(
@@ -100,7 +102,8 @@ fun ScreenCharacterDetails(
         charisma = charismaText.toIntOrNull() ?: 10,
         currentHp = c.currentHp,
         armourBonus = c.armourBonus,
-        shieldBonus = c.shieldBonus
+        shieldBonus = c.shieldBonus,
+        inventory = c.inventory
     )
 
     Surface(
@@ -221,6 +224,14 @@ fun ScreenCharacterDetails(
             Spacer(Modifier.height(16.dp))
 
             CharacterDerivedStatsCard(character = previewCharacter)
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterEquipmentCard(character = previewCharacter)
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterInventoryCard(character = previewCharacter)
 
             Spacer(Modifier.height(12.dp))
 

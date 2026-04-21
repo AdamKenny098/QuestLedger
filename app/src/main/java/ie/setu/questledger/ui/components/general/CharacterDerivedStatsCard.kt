@@ -74,6 +74,15 @@ fun CharacterDerivedStatsCard(
             Text("Inventory Capacity: ${derived.inventoryCapacity}")
             Text("Hit Die: d${derived.hitDie}")
 
+            Spacer(Modifier.height(8.dp))
+
+            Text("Equipped Weapon: ${derived.weaponName ?: "None"}")
+            Text("Damage Roll: ${derived.damageRoll}")
+
+            if (derived.spellcastingBlocked){
+                Text("Spellcasting: Blocked")
+            }
+
             if (derived.spellAttackBonus != 0 || derived.spellSaveDc != 0) {
                 Spacer(Modifier.height(8.dp))
                 Text("Spell Attack: ${fmt(derived.spellAttackBonus)}")
