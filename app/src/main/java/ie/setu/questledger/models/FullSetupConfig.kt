@@ -11,8 +11,9 @@ data class FullSetupConfig(
     val intelligence: Int,
     val wisdom: Int,
     val charisma: Int,
-    val selectedProficiencies: List<String>,
-    val selectedWeapon: String?,
-    val selectedArmour: String?,
-    val selectedSpells: List<String>
+    val selectedProficiencyIds: List<String>,
+    val starterWeaponId: String?,
+    val starterArmourId: String?,
+    val hasShield: Boolean,
+    val starterSpellIds: List<String>
 )
