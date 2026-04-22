@@ -79,7 +79,7 @@ fun CharacterDerivedStatsCard(
             Text("Equipped Weapon: ${derived.weaponName ?: "None"}")
             Text("Damage Roll: ${derived.damageRoll}")
 
-            if (derived.spellcastingBlocked){
+            if (derived.spellcastingBlocked) {
                 Text("Spellcasting: Blocked")
             }
 
@@ -87,6 +87,29 @@ fun CharacterDerivedStatsCard(
                 Spacer(Modifier.height(8.dp))
                 Text("Spell Attack: ${fmt(derived.spellAttackBonus)}")
                 Text("Spell Save DC: ${derived.spellSaveDc}")
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            val slotsText = if (derived.spellSlotsByLevel.isEmpty()) {
+                "None"
+            } else {
+                derived.spellSlotsByLevel.mapIndexed { index, count ->
+                    "L${index + 1} x$count"
+                }.joinToString(", ")
+            }
+
+            Text("Spell Slots: $slotsText")
+
+            Spacer(Modifier.height(8.dp))
+
+            Text("Unlocked Features:")
+            if (derived.unlockedFeatures.isEmpty()) {
+                Text("None")
+            } else {
+                derived.unlockedFeatures.forEach { feature ->
+                    Text("• $feature")
+                }
             }
         }
     }

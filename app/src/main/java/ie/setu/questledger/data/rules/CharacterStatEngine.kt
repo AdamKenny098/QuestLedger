@@ -10,7 +10,11 @@ object CharacterStatEngine {
         val equippedWeapon = InventoryEngine.findEquippedWeapon(inventory)
         val equippedArmour = InventoryEngine.findEquippedArmour(inventory)
         val equippedOffhand = InventoryEngine.findEquippedOffhand(inventory)
-        val spellFocus = InventoryEngine.findSpellFocus(inventory)
+
+        val progression = CharacterProgressionRules.build(
+            classId = character.characterClass,
+            level = character.level
+        )
 
         val strMod = abilityModifier(character.strength)
         val dexMod = abilityModifier(character.dexterity)
@@ -19,8 +23,8 @@ object CharacterStatEngine {
         val wisMod = abilityModifier(character.wisdom)
         val chaMod = abilityModifier(character.charisma)
 
-        val proficiencyBonus = proficiencyBonusForLevel(character.level)
-        val hitDie = hitDieForClass(character.characterClass)
+        val proficiencyBonus = progression.proficiencyBonus
+        val hitDie = progression.hitDie
 
         val maxHp = calculateMaxHp(
             level = character.level,
@@ -33,8 +37,14 @@ object CharacterStatEngine {
         val baseArmourBonus = if (hasInventoryItems) 0 else character.armourBonus
         val baseShieldBonus = if (hasInventoryItems) 0 else character.shieldBonus
 
-        val armourBonus = baseArmourBonus + (equippedArmour?.armourBonus ?: 0)
-        val shieldBonus = baseShieldBonus + (equippedOffhand?.shieldBonus ?: 0)
+        val equippedArmourBonus = equippedArmour?.armourBonus ?: 0
+        val equippedShieldBonus = equippedOffhand?.shieldBonus ?: 0
+
+        val raceBonus = raceAcBonus(character.race)
+        val classBonus = classAcBonus(character.characterClass)
+
+        val armourBonus = baseArmourBonus + equippedArmourBonus + raceBonus + classBonus
+        val shieldBonus = baseShieldBonus + equippedShieldBonus
 
         val armourClass = calculateArmourClass(
             armourBonus = armourBonus,
@@ -56,14 +66,20 @@ object CharacterStatEngine {
         val spellcastingBlocked = equippedArmour?.spellcastingBlocked == true
         val canCast = !spellcastingBlocked
 
-        val spellAttackBonus = if (spellcastingMod == null || !canCast) 0 else proficiencyBonus + spellcastingMod
-        val spellSaveDc = if (spellcastingMod == null || !canCast) 0 else 8 + proficiencyBonus + spellcastingMod
+        val spellAttackBonus =
+            if (spellcastingMod == null || !canCast) 0 else proficiencyBonus + spellcastingMod
+
+        val spellSaveDc =
+            if (spellcastingMod == null || !canCast) 0 else 8 + proficiencyBonus + spellcastingMod
 
         val initiativeBonus = dexMod
         val passivePerception = 10 + wisMod
         val carryCapacity = (character.strength * 15).coerceAtLeast(0)
         val inventoryCapacity = inventory.capacitySlots
-        val speed = (speedForRace(character.race) - (equippedArmour?.movementPenalty ?: 0)).coerceAtLeast(0)
+        val speed = (
+                speedForRace(character.race) -
+                        (equippedArmour?.movementPenalty ?: 0)
+                ).coerceAtLeast(0)
 
         return CharacterDerivedStats(
             strengthScore = character.strength,
@@ -100,32 +116,15 @@ object CharacterStatEngine {
 
             weaponName = equippedWeapon?.name,
             damageRoll = equippedWeapon?.damageDice ?: "1",
-            spellcastingBlocked = spellcastingBlocked
+            spellcastingBlocked = spellcastingBlocked,
+
+            spellSlotsByLevel = progression.spellSlotsByLevel,
+            unlockedFeatures = progression.unlockedFeatures
         )
     }
 
     private fun abilityModifier(score: Int): Int {
         return floor((score - 10) / 2.0).toInt()
-    }
-
-    private fun proficiencyBonusForLevel(level: Int): Int {
-        return when (level.coerceIn(1, 20)) {
-            in 1..4 -> 2
-            in 5..8 -> 3
-            in 9..12 -> 4
-            in 13..16 -> 5
-            else -> 6
-        }
-    }
-
-    private fun hitDieForClass(classId: String): Int {
-        return when (classId.lowercase()) {
-            "fighter", "paladin", "ranger" -> 10
-            "cleric", "druid", "rogue", "bard", "warlock", "monk" -> 8
-            "wizard", "sorcerer" -> 6
-            "barbarian" -> 12
-            else -> 8
-        }
     }
 
     private fun calculateMaxHp(
@@ -171,6 +170,18 @@ object CharacterStatEngine {
         return when (raceId.lowercase()) {
             "dwarf", "halfling", "gnome" -> 25
             else -> 30
+        }
+    }
+
+    private fun raceAcBonus(raceId: String): Int {
+        return when (raceId.lowercase()) {
+            else -> 0
+        }
+    }
+
+    private fun classAcBonus(classId: String): Int {
+        return when (classId.lowercase()) {
+            else -> 0
         }
     }
 }
