@@ -32,7 +32,11 @@ data class CharacterDerivedStats(
 
     val speed: Int,
     val hitDie: Int,
+
     val weaponName: String?,
     val damageRoll: String,
-    val spellcastingBlocked: Boolean
+    val spellcastingBlocked: Boolean,
+
+    val spellSlotsByLevel: List<Int>,
+    val unlockedFeatures: List<String>
 )
