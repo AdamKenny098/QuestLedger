@@ -31,7 +31,9 @@ import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.components.general.CharacterEquipmentCard
+import ie.setu.questledger.ui.components.general.CharacterEquipmentEditorCard
 import ie.setu.questledger.ui.components.general.CharacterInventoryCard
+import ie.setu.questledger.ui.components.general.CharacterInventoryEditorCard
 
 @Composable
 fun ScreenCharacterDetails(
@@ -103,7 +105,7 @@ fun ScreenCharacterDetails(
         currentHp = c.currentHp,
         armourBonus = c.armourBonus,
         shieldBonus = c.shieldBonus,
-        inventory = c.inventory
+        inventory = vm.character.value.inventory
     )
 
     Surface(
@@ -234,6 +236,25 @@ fun ScreenCharacterDetails(
             CharacterInventoryCard(character = previewCharacter)
 
             Spacer(Modifier.height(12.dp))
+
+            CharacterEquipmentEditorCard(
+                inventory = vm.character.value.inventory,
+                onEquipItem = vm::equipItem,
+                onUnequipWeapon = vm::unequipWeapon,
+                onUnequipArmour = vm::unequipArmour,
+                onUnequipOffhand = vm::unequipOffhand,
+                onUnequipSpellFocus = vm::unequipSpellFocus
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterInventoryEditorCard(
+                inventory = vm.character.value.inventory,
+                onRemoveItem = vm::removeItem,
+                onAddTestPotion = vm::addTestPotion,
+                onAddTestTool = vm::addTestTool,
+                onAddTestShield = vm::addTestShield
+            )
 
             OutlinedTextField(
                 value = text,
