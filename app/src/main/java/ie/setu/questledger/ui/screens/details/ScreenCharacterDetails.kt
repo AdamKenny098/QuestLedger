@@ -102,9 +102,9 @@ fun ScreenCharacterDetails(
         intelligence = intelligenceText.toIntOrNull() ?: 10,
         wisdom = wisdomText.toIntOrNull() ?: 10,
         charisma = charismaText.toIntOrNull() ?: 10,
-        currentHp = c.currentHp,
-        armourBonus = c.armourBonus,
-        shieldBonus = c.shieldBonus,
+        currentHp = vm.character.value.currentHp,
+        armourBonus = vm.character.value.armourBonus,
+        shieldBonus = vm.character.value.shieldBonus,
         inventory = vm.character.value.inventory
     )
 

@@ -28,18 +28,23 @@ object CharacterStatEngine {
             conMod = conMod
         )
 
-        val armourBonus = character.armourBonus + (equippedArmour?.armourBonus ?: 0)
-        val shieldBonus = character.shieldBonus + (equippedOffhand?.shieldBonus ?: 0)
+        val hasInventoryItems = inventory.items.isNotEmpty()
+
+        val baseArmourBonus = if (hasInventoryItems) 0 else character.armourBonus
+        val baseShieldBonus = if (hasInventoryItems) 0 else character.shieldBonus
+
+        val armourBonus = baseArmourBonus + (equippedArmour?.armourBonus ?: 0)
+        val shieldBonus = baseShieldBonus + (equippedOffhand?.shieldBonus ?: 0)
 
         val armourClass = calculateArmourClass(
-            armourBonus = character.armourBonus,
-            shieldBonus = character.shieldBonus,
+            armourBonus = armourBonus,
+            shieldBonus = shieldBonus,
             dexMod = dexMod
         )
 
         val weaponAttackBonus = equippedWeapon?.attackBonus ?: 0
-        val meleeAttackBonus = proficiencyBonus + strMod
-        val rangedAttackBonus = proficiencyBonus + dexMod
+        val meleeAttackBonus = proficiencyBonus + strMod + weaponAttackBonus
+        val rangedAttackBonus = proficiencyBonus + dexMod + weaponAttackBonus
 
         val spellcastingMod = spellcastingModifierForClass(
             classId = character.characterClass,
