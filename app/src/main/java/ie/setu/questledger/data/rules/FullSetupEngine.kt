@@ -75,7 +75,14 @@ class FullSetupEngine @Inject constructor(
         )
 
         val derived = CharacterStatEngine.build(character)
-        val spellSlotsSummary = formatSpellSlots(clazz, config.level)
+
+        val spellSlotsSummary = if (derived.spellSlotsByLevel.isEmpty()) {
+            "None"
+        } else {
+            derived.spellSlotsByLevel.mapIndexed { index, count ->
+                "L${index + 1} x$count"
+            }.joinToString(", ")
+        }
 
         val summaryLines = buildList {
             add("Full Setup Build")
@@ -103,6 +110,7 @@ class FullSetupEngine @Inject constructor(
             add("Inventory Capacity: ${derived.inventoryCapacity}")
             add("Speed: ${derived.speed}")
             add("Hit Die: d${derived.hitDie}")
+            add("Proficiency Bonus: +${derived.proficiencyBonus}")
 
             if (starterSpells.isNotEmpty()) {
                 add("Starter Spells: ${starterSpells.joinToString { it.name }}")
@@ -111,6 +119,10 @@ class FullSetupEngine @Inject constructor(
             if (derived.spellAttackBonus != 0 || derived.spellSaveDc != 0) {
                 add("Spell Attack: ${formatSigned(derived.spellAttackBonus)}")
                 add("Spell Save DC: ${derived.spellSaveDc}")
+            }
+
+            if (derived.unlockedFeatures.isNotEmpty()) {
+                add("Unlocked Features: ${derived.unlockedFeatures.joinToString()}")
             }
 
             add("Spell Slots: $spellSlotsSummary")

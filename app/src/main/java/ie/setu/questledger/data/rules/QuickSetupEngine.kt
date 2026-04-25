@@ -74,10 +74,16 @@ class QuickSetupEngine @Inject constructor(
             shieldBonus = 0,
             inventory = inventory
         )
-
         val derived = CharacterStatEngine.build(character)
 
-        val spellSlotsSummary = formatSpellSlots(clazz, config.level)
+        val spellSlotsSummary = if (derived.spellSlotsByLevel.isEmpty()) {
+            "None"
+        } else {
+            derived.spellSlotsByLevel.mapIndexed { index, count ->
+                "L${index + 1} x$count"
+            }.joinToString(", ")
+        }
+
         val summaryLines = buildList {
             add("Quick Setup Build")
             add("Race: ${race.name}")
@@ -87,6 +93,7 @@ class QuickSetupEngine @Inject constructor(
             add("Shield: ${if (hasShield) "Yes" else "No"}")
             add("HP Max: ${derived.maxHp}")
             add("AC: ${derived.armourClass}")
+            add("Proficiency Bonus: +${derived.proficiencyBonus}")
             add("Initiative: ${if (derived.initiativeBonus >= 0) "+${derived.initiativeBonus}" else derived.initiativeBonus}")
             add("Passive Perception: ${derived.passivePerception}")
 
@@ -95,6 +102,10 @@ class QuickSetupEngine @Inject constructor(
             }
 
             add("Spell Slots: $spellSlotsSummary")
+
+            if (derived.unlockedFeatures.isNotEmpty()) {
+                add("Unlocked Features: ${derived.unlockedFeatures.joinToString()}")
+            }
         }
 
         return QuickSetupResult(
