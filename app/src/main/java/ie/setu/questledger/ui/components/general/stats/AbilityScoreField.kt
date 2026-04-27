@@ -1,4 +1,4 @@
-package ie.setu.questledger.ui.components.general
+package ie.setu.questledger.ui.components.general.stats
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.OutlinedTextField

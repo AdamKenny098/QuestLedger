@@ -1,7 +1,7 @@
 package ie.setu.questledger.data.firestore
 
 import com.google.firebase.firestore.FirebaseFirestore
-import ie.setu.questledger.models.QuestModel
+import ie.setu.questledger.models.quests.QuestModel
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton

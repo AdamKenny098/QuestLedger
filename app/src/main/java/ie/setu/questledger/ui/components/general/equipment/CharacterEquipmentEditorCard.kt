@@ -1,4 +1,4 @@
-package ie.setu.questledger.ui.components.general
+package ie.setu.questledger.ui.components.general.equipment
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -13,9 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import ie.setu.questledger.models.CharacterInventory
-import ie.setu.questledger.models.InventoryItemModel
-import ie.setu.questledger.models.InventoryItemType
+import ie.setu.questledger.models.inventory.CharacterInventory
+import ie.setu.questledger.models.inventory.InventoryItemModel
+import ie.setu.questledger.models.inventory.InventoryItemType
 
 @Composable
 fun CharacterEquipmentEditorCard(

@@ -1,4 +1,6 @@
-package ie.setu.questledger.models
+package ie.setu.questledger.models.characters
+
+import ie.setu.questledger.models.inventory.CharacterInventory
 
 data class CharacterModel(
     val id: String = "",

@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.models.characters.CharacterModel
 import ie.setu.questledger.ui.components.general.ShowError
 import ie.setu.questledger.ui.screens.roster.RosterSort
 import ie.setu.questledger.ui.screens.roster.RosterViewModel

@@ -7,7 +7,7 @@ import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.firestore.QuestFirestoreService
-import ie.setu.questledger.models.QuestModel
+import ie.setu.questledger.models.quests.QuestModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 

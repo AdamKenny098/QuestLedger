@@ -1,6 +1,6 @@
 package ie.setu.questledger.data.firestore
 
-import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.models.characters.CharacterModel
 import kotlinx.coroutines.flow.Flow
 
 typealias Character = CharacterModel

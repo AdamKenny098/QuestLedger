@@ -2,7 +2,7 @@ package ie.setu.questledger.data.firestore
 
 import com.google.firebase.firestore.FirebaseFirestore
 import ie.setu.questledger.data.auth.AuthService
-import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.models.characters.CharacterModel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

@@ -1,4 +1,4 @@
-package ie.setu.questledger.ui.components.general
+package ie.setu.questledger.ui.components.general.stats
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ie.setu.questledger.data.rules.CharacterStatEngine
-import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.models.characters.CharacterModel
 
 @Composable
 fun CharacterDerivedStatsCard(

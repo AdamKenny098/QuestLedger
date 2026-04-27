@@ -24,16 +24,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import ie.setu.questledger.data.compendium.CompendiumLookup
-import ie.setu.questledger.models.CharacterModel
-import ie.setu.questledger.ui.components.general.AbilityScoreField
-import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
+import ie.setu.questledger.models.characters.CharacterModel
+import ie.setu.questledger.ui.components.general.stats.AbilityScoreField
+import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
 import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
-import ie.setu.questledger.ui.components.general.CharacterEquipmentCard
-import ie.setu.questledger.ui.components.general.CharacterEquipmentEditorCard
-import ie.setu.questledger.ui.components.general.CharacterInventoryCard
-import ie.setu.questledger.ui.components.general.CharacterInventoryEditorCard
+import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentCard
+import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentEditorCard
+import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryCard
+import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryEditorCard
 
 @Composable
 fun ScreenCharacterDetails(

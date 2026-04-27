@@ -1,4 +1,4 @@
-package ie.setu.questledger.models
+package ie.setu.questledger.models.quests
 
 data class QuestModel(
     val id: String = "",

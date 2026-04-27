@@ -7,11 +7,11 @@ import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.compendium.SpellDefinition
 import ie.setu.questledger.data.compendium.WeaponDefinition
-import ie.setu.questledger.models.CharacterInventory
-import ie.setu.questledger.models.CharacterModel
-import ie.setu.questledger.models.EquipmentLoadout
-import ie.setu.questledger.models.InventoryItemModel
-import ie.setu.questledger.models.InventoryItemType
+import ie.setu.questledger.models.inventory.CharacterInventory
+import ie.setu.questledger.models.characters.CharacterModel
+import ie.setu.questledger.models.inventory.EquipmentLoadout
+import ie.setu.questledger.models.inventory.InventoryItemModel
+import ie.setu.questledger.models.inventory.InventoryItemType
 import ie.setu.questledger.models.QuickSetupConfig
 import javax.inject.Inject
 import javax.inject.Singleton

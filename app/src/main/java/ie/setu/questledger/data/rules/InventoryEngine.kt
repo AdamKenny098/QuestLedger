@@ -1,9 +1,9 @@
 package ie.setu.questledger.data.rules
 
-import ie.setu.questledger.models.CharacterInventory
-import ie.setu.questledger.models.EquipmentLoadout
-import ie.setu.questledger.models.InventoryItemModel
-import ie.setu.questledger.models.InventoryItemType
+import ie.setu.questledger.models.inventory.CharacterInventory
+import ie.setu.questledger.models.inventory.EquipmentLoadout
+import ie.setu.questledger.models.inventory.InventoryItemModel
+import ie.setu.questledger.models.inventory.InventoryItemType
 
 object InventoryEngine {
 

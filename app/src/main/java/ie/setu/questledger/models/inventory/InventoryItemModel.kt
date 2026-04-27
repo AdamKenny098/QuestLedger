@@ -1,4 +1,6 @@
-package ie.setu.questledger.models
+package ie.setu.questledger.models.inventory
+
+import ie.setu.questledger.models.inventory.InventoryItemType
 
 data class InventoryItemModel(
     val id: String = "",

@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import ie.setu.questledger.models.FullSetupConfig
-import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
+import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
 
 private enum class FullSetupStep {
     CLASS, RACE, STATS, PROFICIENCIES, GEAR, SPELLS, REVIEW

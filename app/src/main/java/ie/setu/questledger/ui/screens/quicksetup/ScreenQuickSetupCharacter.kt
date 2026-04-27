@@ -23,7 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ie.setu.questledger.models.QuickSetupConfig
-import ie.setu.questledger.ui.components.general.CharacterDerivedStatsCard
+import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
 import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 

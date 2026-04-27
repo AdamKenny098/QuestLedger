@@ -14,9 +14,9 @@ import ie.setu.questledger.data.firestore.FirestoreService
 import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.data.rules.InventoryEngine
 import ie.setu.questledger.data.storage.StorageService
-import ie.setu.questledger.models.CharacterModel
-import ie.setu.questledger.models.InventoryItemModel
-import ie.setu.questledger.models.InventoryItemType
+import ie.setu.questledger.models.characters.CharacterModel
+import ie.setu.questledger.models.inventory.InventoryItemModel
+import ie.setu.questledger.models.inventory.InventoryItemType
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 @HiltViewModel

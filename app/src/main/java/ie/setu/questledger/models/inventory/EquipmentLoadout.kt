@@ -1,4 +1,4 @@
-package ie.setu.questledger.models
+package ie.setu.questledger.models.inventory
 
 data class EquipmentLoadout(
     val weaponId: String? = null,

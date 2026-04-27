@@ -1,4 +1,4 @@
-package ie.setu.questledger.models
+package ie.setu.questledger.models.inventory
 
 enum class InventoryItemType {
     WEAPON,

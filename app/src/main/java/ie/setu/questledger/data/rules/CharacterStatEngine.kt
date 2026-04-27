@@ -1,6 +1,6 @@
 package ie.setu.questledger.data.rules
 
-import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.models.characters.CharacterModel
 import kotlin.math.floor
 
 object CharacterStatEngine {

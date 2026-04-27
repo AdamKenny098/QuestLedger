@@ -12,7 +12,7 @@ import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.firestore.FirestoreService
 import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.data.storage.StorageService
-import ie.setu.questledger.models.CharacterModel
+import ie.setu.questledger.models.characters.CharacterModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
