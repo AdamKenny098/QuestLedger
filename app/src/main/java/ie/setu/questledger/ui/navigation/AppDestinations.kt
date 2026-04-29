@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Casino
 
 interface AppDestination {
     val icon: ImageVector
@@ -63,4 +64,10 @@ object FullSetupCharacter : AppDestination {
     override val route = "full_setup_character"
 }
 
-val bottomNavDestinations = listOf(Create, Roster, About, Profile, CampaignMap)
+object Dice : AppDestination {
+    override val icon = Icons.Filled.Casino
+    override val label = "Dice"
+    override val route = "dice"
+}
+
+val bottomNavDestinations = listOf(Create, Roster, Dice, Profile, CampaignMap)

@@ -25,6 +25,7 @@ import ie.setu.questledger.ui.screens.profile.ScreenProfile
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
 import ie.setu.questledger.ui.screens.quicksetup.ScreenQuickSetupCharacter
 import ie.setu.questledger.ui.screens.premade.ScreenPremadeCharacters
+import ie.setu.questledger.ui.screens.ScreenDiceRoller
 
 @Composable
 fun QuestLedgerNavHost(
@@ -183,6 +184,10 @@ fun QuestLedgerNavHost(
                 ScreenCharacterDetails(
                     onDone = { navController.popBackStack() }
                 )
+            }
+
+            composable(route = Dice.route) {
+                ScreenDiceRoller()
             }
         }
     }
