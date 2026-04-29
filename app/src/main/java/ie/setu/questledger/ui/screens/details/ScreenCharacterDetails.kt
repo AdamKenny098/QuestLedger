@@ -34,7 +34,7 @@ import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentCar
 import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentEditorCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryEditorCard
-
+import ie.setu.questledger.ui.components.general.DiceRollerPanel
 @Composable
 fun ScreenCharacterDetails(
     onDone: () -> Unit
@@ -224,7 +224,6 @@ fun ScreenCharacterDetails(
             AbilityScoreField("Charisma", charismaText, { charismaText = it })
 
             Spacer(Modifier.height(16.dp))
-
             CharacterDerivedStatsCard(character = previewCharacter)
 
             Spacer(Modifier.height(12.dp))
@@ -234,6 +233,10 @@ fun ScreenCharacterDetails(
             Spacer(Modifier.height(12.dp))
 
             CharacterInventoryCard(character = previewCharacter)
+
+            Spacer(Modifier.height(12.dp))
+
+            DiceRollerPanel(character = previewCharacter)
 
             Spacer(Modifier.height(12.dp))
 
