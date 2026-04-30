@@ -46,9 +46,11 @@ import ie.setu.questledger.ui.screens.roster.RosterSort
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
 import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.data.compendium.CompendiumLookup
+import androidx.compose.material.icons.filled.MoreVert
 
 @Composable
-fun ScreenRoster(onOpenDetails: (String) -> Unit) {
+fun ScreenRoster(onOpenDetails: (String) -> Unit,
+                 onOpenAbout: () -> Unit = {}) {
     val vm: RosterViewModel = hiltViewModel()
 
     val characters = vm.uiCharacters.collectAsState().value
@@ -56,6 +58,8 @@ fun ScreenRoster(onOpenDetails: (String) -> Unit) {
     val error = vm.error.collectAsState().value
 
     var sortExpanded by remember { mutableStateOf(false) }
+    var actionsExpanded by remember { mutableStateOf(false) }
+
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -86,28 +90,64 @@ fun ScreenRoster(onOpenDetails: (String) -> Unit) {
                     modifier = Modifier.weight(1f)
                 )
 
-                IconButton(onClick = { sortExpanded = true }) {
-                    Icon(Icons.Filled.Sort, contentDescription = "Sort")
+                Column {
+                    IconButton(onClick = { sortExpanded = true }) {
+                        Icon(Icons.Filled.Sort, contentDescription = "Sort")
+                    }
+
+                    DropdownMenu(
+                        expanded = sortExpanded,
+                        onDismissRequest = { sortExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Name (A–Z)") },
+                            onClick = {
+                                sortExpanded = false
+                                vm.onSortChange(RosterSort.NAME_ASC)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Level (High–Low)") },
+                            onClick = {
+                                sortExpanded = false
+                                vm.onSortChange(RosterSort.LEVEL_DESC)
+                            }
+                        )
+                    }
                 }
 
-                DropdownMenu(
-                    expanded = sortExpanded,
-                    onDismissRequest = { sortExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Name (A–Z)") },
-                        onClick = {
-                            sortExpanded = false
-                            vm.onSortChange(RosterSort.NAME_ASC)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Level (High–Low)") },
-                        onClick = {
-                            sortExpanded = false
-                            vm.onSortChange(RosterSort.LEVEL_DESC)
-                        }
-                    )
+                Column {
+                    IconButton(onClick = { actionsExpanded = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = "More actions")
+                    }
+
+                    DropdownMenu(
+                        expanded = actionsExpanded,
+                        onDismissRequest = { actionsExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Help") },
+                            onClick = {
+                                actionsExpanded = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("About") },
+                            onClick = {
+                                actionsExpanded = false
+                                onOpenAbout()
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Delete All Characters") },
+                            onClick = {
+                                actionsExpanded = false
+                                vm.deleteAll()
+                            }
+                        )
+                    }
                 }
             }
 
@@ -135,17 +175,6 @@ fun ScreenRoster(onOpenDetails: (String) -> Unit) {
                         onOpenDetails = onOpenDetails
                     )
                     Spacer(Modifier.height(16.dp))
-                }
-
-                item {
-                    FilledTonalButton(
-                        onClick = { vm.deleteAll() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Delete All")
-                    }
-
-                    Spacer(Modifier.height(24.dp))
                 }
             }
         }

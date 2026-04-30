@@ -118,6 +118,10 @@ fun QuestLedgerNavHost(
                 ScreenRoster(
                     onOpenDetails = { id ->
                         navController.navigate("${NavRoutes.DETAILS}/$id")
+                    },
+
+                    onOpenAbout = {
+                        navController.navigate((About.route))
                     }
                 )
             }
