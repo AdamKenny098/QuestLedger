@@ -70,8 +70,11 @@ class FullSetupEngine @Inject constructor(
             intelligence = config.intelligence,
             wisdom = config.wisdom,
             charisma = config.charisma,
-            armourBonus = starterArmour?.let { armourBonusFromDefinition(it) } ?: 0,
-            shieldBonus = if (config.hasShield) 2 else 0
+            armourBonus = 0,
+            shieldBonus = 0,
+            inventory = inventory,
+            knownSpellIds = starterSpells.map { it.id },
+            preparedSpellIds = starterSpells.map { it.id }
         )
 
         val derived = CharacterStatEngine.build(character)

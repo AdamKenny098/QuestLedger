@@ -72,7 +72,9 @@ class QuickSetupEngine @Inject constructor(
             charisma = scores[AbilityType.CHARISMA] ?: 10,
             armourBonus = 0,
             shieldBonus = 0,
-            inventory = inventory
+            inventory = inventory,
+            knownSpellIds = starterSpells.map { it.id },
+            preparedSpellIds = starterSpells.map { it.id }
         )
         val derived = CharacterStatEngine.build(character)
 
