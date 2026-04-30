@@ -2,6 +2,7 @@ package ie.setu.questledger.models.characters
 
 import ie.setu.questledger.models.inventory.CharacterInventory
 
+
 data class CharacterModel(
     val id: String = "",
     val email: String = "",
@@ -20,5 +21,7 @@ data class CharacterModel(
     val currentHp: Int = 0,
     val armourBonus: Int = 0,
     val shieldBonus: Int = 0,
-    val inventory: CharacterInventory = CharacterInventory()
+    val inventory: CharacterInventory = CharacterInventory(),
+    val knownSpellIds: List<String> = emptyList(),
+    val preparedSpellIds: List<String> = emptyList()
 )

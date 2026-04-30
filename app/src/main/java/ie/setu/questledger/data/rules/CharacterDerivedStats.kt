@@ -38,5 +38,6 @@ data class CharacterDerivedStats(
     val spellcastingBlocked: Boolean,
 
     val spellSlotsByLevel: List<Int>,
-    val unlockedFeatures: List<String>
+    val unlockedFeatures: List<String>,
+    val spellcastingAbilityLabel: String?
 )

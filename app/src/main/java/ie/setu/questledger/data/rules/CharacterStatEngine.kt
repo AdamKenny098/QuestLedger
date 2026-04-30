@@ -63,6 +63,8 @@ object CharacterStatEngine {
             chaMod = chaMod
         )
 
+        val spellcastingAbilityLabel = spellcastingAbilityLabelForClass(character.characterClass)
+
         val spellcastingBlocked = equippedArmour?.spellcastingBlocked == true
         val canCast = !spellcastingBlocked
 
@@ -119,7 +121,8 @@ object CharacterStatEngine {
             spellcastingBlocked = spellcastingBlocked,
 
             spellSlotsByLevel = progression.spellSlotsByLevel,
-            unlockedFeatures = progression.unlockedFeatures
+            unlockedFeatures = progression.unlockedFeatures,
+            spellcastingAbilityLabel = spellcastingAbilityLabel
         )
     }
 
@@ -162,6 +165,15 @@ object CharacterStatEngine {
             "wizard", "artificer" -> intMod
             "cleric", "druid", "ranger" -> wisMod
             "bard", "paladin", "sorcerer", "warlock" -> chaMod
+            else -> null
+        }
+    }
+
+    private fun spellcastingAbilityLabelForClass(classId: String): String? {
+        return when (classId.lowercase()) {
+            "wizard", "artificer" -> "Intelligence"
+            "cleric", "druid", "ranger" -> "Wisdom"
+            "bard", "paladin", "sorcerer", "warlock" -> "Charisma"
             else -> null
         }
     }
