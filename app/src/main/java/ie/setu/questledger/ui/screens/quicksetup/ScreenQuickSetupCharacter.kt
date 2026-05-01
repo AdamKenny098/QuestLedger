@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,7 +41,7 @@ fun ScreenQuickSetupCharacter(
     var selectedRaceId by remember { mutableStateOf(races.firstOrNull()?.id.orEmpty()) }
     var selectedClassId by remember { mutableStateOf(classes.firstOrNull()?.id.orEmpty()) }
     var level by remember { mutableStateOf(1) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     val config = QuickSetupConfig(
         name = name,
@@ -144,9 +145,22 @@ fun ScreenQuickSetupCharacter(
 
             Spacer(Modifier.height(12.dp))
 
-            error?.let {
+            if (vm.isLoading.value) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+            }
+
+            localError?.let {
                 Text(
                     text = it,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (vm.isErr.value && vm.error.value.isNotBlank()) {
+                Text(
+                    text = vm.error.value,
                     color = MaterialTheme.colorScheme.error
                 )
                 Spacer(Modifier.height(8.dp))
@@ -155,18 +169,19 @@ fun ScreenQuickSetupCharacter(
             Button(
                 onClick = {
                     when {
-                        name.isBlank() -> error = "Name is required"
-                        selectedClassId.isBlank() -> error = "Class is required"
-                        selectedRaceId.isBlank() -> error = "Race is required"
-                        level !in 1..20 -> error = "Level must be between 1 and 20"
+                        name.isBlank() -> localError = "Name is required"
+                        selectedClassId.isBlank() -> localError = "Class is required"
+                        selectedRaceId.isBlank() -> localError = "Race is required"
+                        level !in 1..20 -> localError = "Level must be between 1 and 20"
                         else -> {
-                            error = null
+                            localError = null
                             vm.saveQuickSetup(config) {
                                 onDone()
                             }
                         }
                     }
                 },
+                enabled = !vm.isLoading.value,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Create Quick Character")

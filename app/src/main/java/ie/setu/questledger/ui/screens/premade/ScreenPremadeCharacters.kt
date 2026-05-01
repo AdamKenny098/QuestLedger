@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,7 +39,7 @@ fun ScreenPremadeCharacters(
 
     var selectedTemplateId by remember { mutableStateOf(templates.firstOrNull()?.id.orEmpty()) }
     var characterName by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     val selectedTemplate = remember(selectedTemplateId) {
         templates.firstOrNull { it.id == selectedTemplateId }
@@ -125,9 +126,22 @@ fun ScreenPremadeCharacters(
 
             Spacer(Modifier.height(12.dp))
 
-            error?.let {
+            if (vm.isLoading.value) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+            }
+
+            localError?.let {
                 Text(
                     text = it,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (vm.isErr.value && vm.error.value.isNotBlank()) {
+                Text(
+                    text = vm.error.value,
                     color = MaterialTheme.colorScheme.error
                 )
                 Spacer(Modifier.height(8.dp))
@@ -136,15 +150,16 @@ fun ScreenPremadeCharacters(
             Button(
                 onClick = {
                     when {
-                        selectedTemplateId.isBlank() -> error = "Choose a template"
+                        selectedTemplateId.isBlank() -> localError = "Choose a template"
                         else -> {
-                            error = null
+                            localError = null
                             vm.savePremade(selectedTemplateId, characterName) {
                                 onDone()
                             }
                         }
                     }
                 },
+                enabled = !vm.isLoading.value,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Create Premade Character")

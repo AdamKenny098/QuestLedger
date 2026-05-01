@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.MenuBook
 
 interface AppDestination {
     val icon: ImageVector
@@ -68,6 +69,15 @@ object Dice : AppDestination {
     override val icon = Icons.Filled.Casino
     override val label = "Dice"
     override val route = "dice"
+}
+
+object CharacterSpellbook : AppDestination {
+    override val icon = Icons.Filled.MenuBook
+    override val label = "Spellbook"
+    override val route = "character_spellbook/{id}"
+
+    fun createRoute(id: String): String = "character_spellbook/$id"
+
 }
 
 val bottomNavDestinations = listOf(Create, Roster, Dice, Profile, CampaignMap)

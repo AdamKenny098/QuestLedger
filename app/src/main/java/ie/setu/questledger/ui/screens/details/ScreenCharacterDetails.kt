@@ -24,9 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import ie.setu.questledger.data.compendium.CompendiumLookup
+import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.models.characters.CharacterModel
-import ie.setu.questledger.ui.components.general.stats.AbilityScoreField
-import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
 import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
@@ -34,15 +33,16 @@ import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentCar
 import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentEditorCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryEditorCard
-import ie.setu.questledger.ui.components.general.spells.CharacterSpellbookCard
-import ie.setu.questledger.ui.components.general.spells.CharacterSpellbookEditorCard
+import ie.setu.questledger.ui.components.general.stats.AbilityScoreField
+import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
+
 @Composable
 fun ScreenCharacterDetails(
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    onOpenSpellbook: (String) -> Unit = {}
 ) {
     val vm: CharacterDetailsViewModel = hiltViewModel()
     val c = vm.character.value
-    val compendiumService = vm.getCompendiumService()
 
     val races = remember { vm.getRaces() }
     val classes = remember { vm.getClasses() }
@@ -112,6 +112,8 @@ fun ScreenCharacterDetails(
         preparedSpellIds = vm.character.value.preparedSpellIds
     )
 
+    val isSpellcaster = CharacterStatEngine.build(previewCharacter).spellcastingAbilityLabel != null
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -173,6 +175,17 @@ fun ScreenCharacterDetails(
                 )
             }
 
+            if (isSpellcaster) {
+                Spacer(Modifier.height(12.dp))
+
+                Button(
+                    onClick = { onOpenSpellbook(c.id) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Open Spellbook")
+                }
+            }
+
             Spacer(Modifier.height(10.dp))
 
             CompendiumDropdown(
@@ -193,7 +206,6 @@ fun ScreenCharacterDetails(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-
 
             Spacer(Modifier.height(10.dp))
 
@@ -228,6 +240,7 @@ fun ScreenCharacterDetails(
             AbilityScoreField("Charisma", charismaText, { charismaText = it })
 
             Spacer(Modifier.height(16.dp))
+
             CharacterDerivedStatsCard(character = previewCharacter)
 
             Spacer(Modifier.height(12.dp))
@@ -237,6 +250,8 @@ fun ScreenCharacterDetails(
             Spacer(Modifier.height(12.dp))
 
             CharacterInventoryCard(character = previewCharacter)
+
+            Spacer(Modifier.height(12.dp))
 
             CharacterEquipmentEditorCard(
                 inventory = vm.character.value.inventory,
@@ -255,22 +270,6 @@ fun ScreenCharacterDetails(
                 onAddTestPotion = vm::addTestPotion,
                 onAddTestTool = vm::addTestTool,
                 onAddTestShield = vm::addTestShield
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterSpellbookCard(
-                character = previewCharacter,
-                compendiumService = compendiumService
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterSpellbookEditorCard(
-                character = previewCharacter,
-                compendiumService = compendiumService,
-                onToggleKnownSpell = vm::toggleKnownSpell,
-                onTogglePreparedSpell = vm::togglePreparedSpell
             )
 
             Spacer(Modifier.height(12.dp))

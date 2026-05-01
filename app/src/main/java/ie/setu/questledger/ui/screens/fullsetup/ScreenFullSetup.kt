@@ -414,21 +414,52 @@ fun ScreenFullSetup(
                 } else {
                     Button(
                         onClick = {
-                            when {
-                                characterName.isBlank() -> localError = "Enter a character name"
-                                selectedClassId.isBlank() -> localError = "Choose a class"
-                                selectedRaceId.isBlank() -> localError = "Choose a race"
-                                else -> {
-                                    localError = null
-                                    vm.saveCharacter(config) {
-                                        onDone()
+                            when (step) {
+                                FullSetupStep.CLASS -> {
+                                    if (selectedClassId.isBlank()) localError = "Choose a class"
+                                    else {
+                                        localError = null
+                                        step = FullSetupStep.RACE
                                     }
                                 }
+
+                                FullSetupStep.RACE -> {
+                                    if (selectedRaceId.isBlank()) localError = "Choose a race"
+                                    else {
+                                        localError = null
+                                        step = FullSetupStep.STATS
+                                    }
+                                }
+
+                                FullSetupStep.STATS -> {
+                                    localError = null
+                                    step = FullSetupStep.PROFICIENCIES
+                                }
+
+                                FullSetupStep.PROFICIENCIES -> {
+                                    localError = null
+                                    step = FullSetupStep.GEAR
+                                }
+
+                                FullSetupStep.GEAR -> {
+                                    localError = null
+                                    step = FullSetupStep.SPELLS
+                                }
+
+                                FullSetupStep.SPELLS -> {
+                                    if (characterName.isBlank()) localError = "Enter a character name"
+                                    else {
+                                        localError = null
+                                        step = FullSetupStep.REVIEW
+                                    }
+                                }
+
+                                FullSetupStep.REVIEW -> Unit
                             }
                         },
                         enabled = !vm.isLoading.value
                     ) {
-                        Text("Create Character")
+                        Text("Next")
                     }
                 }
             }

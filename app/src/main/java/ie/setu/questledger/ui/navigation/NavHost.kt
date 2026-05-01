@@ -26,6 +26,7 @@ import ie.setu.questledger.ui.screens.roster.RosterViewModel
 import ie.setu.questledger.ui.screens.quicksetup.ScreenQuickSetupCharacter
 import ie.setu.questledger.ui.screens.premade.ScreenPremadeCharacters
 import ie.setu.questledger.ui.screens.ScreenDiceRoller
+import ie.setu.questledger.ui.screens.spellbook.ScreenCharacterSpellbook
 
 @Composable
 fun QuestLedgerNavHost(
@@ -186,12 +187,24 @@ fun QuestLedgerNavHost(
                 arguments = listOf(navArgument("id") { type = NavType.StringType })
             ) {
                 ScreenCharacterDetails(
-                    onDone = { navController.popBackStack() }
+                    onDone = { navController.popBackStack() },
+                    onOpenSpellbook = { id ->
+                        navController.navigate(CharacterSpellbook.createRoute(id))
+                    }
                 )
             }
 
             composable(route = Dice.route) {
                 ScreenDiceRoller()
+            }
+
+            composable(
+                route = CharacterSpellbook.route,
+                arguments = listOf(navArgument("id") { type = NavType.StringType })
+            ) {
+                ScreenCharacterSpellbook(
+                    onDone = { navController.popBackStack() }
+                )
             }
         }
     }
