@@ -32,6 +32,8 @@ class CharacterDetailsViewModel @Inject constructor(
 
     private val id: String = checkNotNull(savedStateHandle["id"])
 
+    fun getCompendiumService(): CompendiumService = compendiumService
+
     var isErr = mutableStateOf(false)
     var error = mutableStateOf(Exception())
     var isLoading = mutableStateOf(false)
@@ -143,6 +145,42 @@ class CharacterDetailsViewModel @Inject constructor(
         val updated = InventoryEngine.addItem(current.inventory, item)
         character.value = current.copy(inventory = updated)
     }
+
+    fun toggleKnownSpell(spellId: String) {
+        val current = character.value
+        val known = current.knownSpellIds.toMutableList()
+
+        if (known.contains(spellId)) {
+            known.remove(spellId)
+        } else {
+            known.add(spellId)
+        }
+
+        val prepared = current.preparedSpellIds.filter { it in known }
+
+        character.value = current.copy(
+            knownSpellIds = known,
+            preparedSpellIds = prepared
+        )
+    }
+
+    fun togglePreparedSpell(spellId: String) {
+        val current = character.value
+
+        if (!current.knownSpellIds.contains(spellId)) return
+
+        val prepared = current.preparedSpellIds.toMutableList()
+
+        if (prepared.contains(spellId)) {
+            prepared.remove(spellId)
+        } else {
+            prepared.add(spellId)
+        }
+
+        character.value = current.copy(
+            preparedSpellIds = prepared
+        )
+    }
     fun updateCharacter(
         name: String,
         characterClass: String,
@@ -184,7 +222,9 @@ class CharacterDetailsViewModel @Inject constructor(
                     intelligence = intelligence,
                     wisdom = wisdom,
                     charisma = charisma,
-                    inventory = character.value.inventory
+                    inventory = character.value.inventory,
+                    knownSpellIds = character.value.knownSpellIds,
+                    preparedSpellIds = character.value.preparedSpellIds
                 )
 
                 val derived = CharacterStatEngine.build(baseCharacter)

@@ -34,12 +34,15 @@ import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentCar
 import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentEditorCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryEditorCard
+import ie.setu.questledger.ui.components.general.spells.CharacterSpellbookCard
+import ie.setu.questledger.ui.components.general.spells.CharacterSpellbookEditorCard
 @Composable
 fun ScreenCharacterDetails(
     onDone: () -> Unit
 ) {
     val vm: CharacterDetailsViewModel = hiltViewModel()
     val c = vm.character.value
+    val compendiumService = vm.getCompendiumService()
 
     val races = remember { vm.getRaces() }
     val classes = remember { vm.getClasses() }
@@ -104,7 +107,9 @@ fun ScreenCharacterDetails(
         currentHp = vm.character.value.currentHp,
         armourBonus = vm.character.value.armourBonus,
         shieldBonus = vm.character.value.shieldBonus,
-        inventory = vm.character.value.inventory
+        inventory = vm.character.value.inventory,
+        knownSpellIds = vm.character.value.knownSpellIds,
+        preparedSpellIds = vm.character.value.preparedSpellIds
     )
 
     Surface(
@@ -251,6 +256,24 @@ fun ScreenCharacterDetails(
                 onAddTestTool = vm::addTestTool,
                 onAddTestShield = vm::addTestShield
             )
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterSpellbookCard(
+                character = previewCharacter,
+                compendiumService = compendiumService
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterSpellbookEditorCard(
+                character = previewCharacter,
+                compendiumService = compendiumService,
+                onToggleKnownSpell = vm::toggleKnownSpell,
+                onTogglePreparedSpell = vm::togglePreparedSpell
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = text,
