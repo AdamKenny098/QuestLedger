@@ -27,6 +27,7 @@ import ie.setu.questledger.ui.screens.quicksetup.ScreenQuickSetupCharacter
 import ie.setu.questledger.ui.screens.premade.ScreenPremadeCharacters
 import ie.setu.questledger.ui.screens.ScreenDiceRoller
 import ie.setu.questledger.ui.screens.spellbook.ScreenCharacterSpellbook
+import ie.setu.questledger.ui.screens.details.ScreenCharacterEdit
 
 @Composable
 fun QuestLedgerNavHost(
@@ -45,13 +46,20 @@ fun QuestLedgerNavHost(
     }
 
     val isAuthScreen = currentRoute == NavRoutes.LOGIN || currentRoute == NavRoutes.REGISTER
-    val isDetailScreen = currentRoute == NavRoutes.DETAILS_ROUTE
+    val isDetailScreen =
+        currentRoute == CharacterDetails.route ||
+                currentRoute == CharacterEdit.route ||
+                currentRoute == CharacterSpellbook.route
 
     val currentLabel = when (currentRoute) {
         NavRoutes.CREATE -> "Create"
         NavRoutes.ABOUT -> "About"
         NavRoutes.PROFILE -> "Profile"
-        NavRoutes.DETAILS_ROUTE -> "Details"
+        CharacterDetails.route -> "Details"
+        CharacterEdit.route -> "Edit Character"
+        CharacterSpellbook.route -> "Spellbook"
+        Dice.route -> "Dice"
+        CampaignMap.route -> "Map"
         else -> "Roster"
     }
 
@@ -118,7 +126,7 @@ fun QuestLedgerNavHost(
             composable(NavRoutes.ROSTER) {
                 ScreenRoster(
                     onOpenDetails = { id ->
-                        navController.navigate("${NavRoutes.DETAILS}/$id")
+                        navController.navigate(CharacterDetails.createRoute(id))
                     },
 
                     onOpenAbout = {
@@ -183,10 +191,24 @@ fun QuestLedgerNavHost(
             }
 
             composable(
-                route = NavRoutes.DETAILS_ROUTE,
+                route = CharacterDetails.route,
                 arguments = listOf(navArgument("id") { type = NavType.StringType })
             ) {
                 ScreenCharacterDetails(
+                    onOpenEdit = { id ->
+                        navController.navigate(CharacterEdit.createRoute(id))
+                    },
+                    onOpenSpellbook = { id ->
+                        navController.navigate(CharacterSpellbook.createRoute(id))
+                    }
+                )
+            }
+
+            composable(
+                route = CharacterEdit.route,
+                arguments = listOf(navArgument("id") { type = NavType.StringType })
+            ) {
+                ScreenCharacterEdit(
                     onDone = { navController.popBackStack() },
                     onOpenSpellbook = { id ->
                         navController.navigate(CharacterSpellbook.createRoute(id))
