@@ -28,6 +28,11 @@ import ie.setu.questledger.ui.screens.premade.ScreenPremadeCharacters
 import ie.setu.questledger.ui.screens.ScreenDiceRoller
 import ie.setu.questledger.ui.screens.spellbook.ScreenCharacterSpellbook
 import ie.setu.questledger.ui.screens.details.ScreenCharacterEdit
+import ie.setu.questledger.ui.screens.dm.ScreenDMWorkspace
+import ie.setu.questledger.ui.screens.dm.ScreenDMCampaignEditor
+import ie.setu.questledger.ui.screens.dm.ScreenDMQuestEditor
+import ie.setu.questledger.ui.screens.dm.ScreenDMNpcEditor
+import ie.setu.questledger.ui.screens.dm.ScreenDMPlaceEditor
 
 @Composable
 fun QuestLedgerNavHost(
@@ -225,6 +230,39 @@ fun QuestLedgerNavHost(
                 arguments = listOf(navArgument("id") { type = NavType.StringType })
             ) {
                 ScreenCharacterSpellbook(
+                    onDone = { navController.popBackStack() }
+                )
+            }
+
+            composable(route = DMWorkspace.route) {
+                ScreenDMWorkspace(
+                    onOpenCampaignEditor = { navController.navigate("dm_campaign_editor") },
+                    onOpenQuestEditor = { navController.navigate("dm_quest_editor") },
+                    onOpenNpcEditor = { navController.navigate("dm_npc_editor") },
+                    onOpenPlaceEditor = { navController.navigate("dm_place_editor") }
+                )
+            }
+
+            composable(route = "dm_campaign_editor") {
+                ScreenDMCampaignEditor(
+                    onDone = { navController.popBackStack() }
+                )
+            }
+
+            composable(route = "dm_quest_editor") {
+                ScreenDMQuestEditor(
+                    onDone = { navController.popBackStack() }
+                )
+            }
+
+            composable(route = "dm_npc_editor") {
+                ScreenDMNpcEditor(
+                    onDone = { navController.popBackStack() }
+                )
+            }
+
+            composable(route = "dm_place_editor") {
+                ScreenDMPlaceEditor(
                     onDone = { navController.popBackStack() }
                 )
             }

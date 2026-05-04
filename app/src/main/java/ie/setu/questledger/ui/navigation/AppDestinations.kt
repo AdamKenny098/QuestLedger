@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.AutoStories
 
 interface AppDestination {
     val icon: ImageVector
@@ -97,4 +98,10 @@ object CharacterDetails : AppDestination {
     fun createRoute(id: String): String = "details/$id"
 }
 
-val bottomNavDestinations = listOf(Create, Roster, Dice, Profile, CampaignMap)
+object DMWorkspace : AppDestination {
+    override val icon = Icons.Filled.AutoStories
+    override val label = "DM"
+    override val route = "dm_workspace"
+}
+
+val bottomNavDestinations = listOf(Create, Roster, Dice, DMWorkspace, Profile, CampaignMap)
