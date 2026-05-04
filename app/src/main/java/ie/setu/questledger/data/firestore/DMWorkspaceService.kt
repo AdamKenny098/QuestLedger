@@ -12,6 +12,11 @@ interface DMWorkspaceService {
     suspend fun upsertNpc(email: String, npc: DMNpcModel)
     suspend fun upsertPlace(email: String, place: DMPlaceModel)
 
+    suspend fun getCampaign(email: String, id: String): DMCampaignModel?
+    suspend fun getQuest(email: String, id: String): DMQuestModel?
+    suspend fun getNpc(email: String, id: String): DMNpcModel?
+    suspend fun getPlace(email: String, id: String): DMPlaceModel?
+
     suspend fun deleteCampaign(email: String, id: String)
     suspend fun deleteQuest(email: String, id: String)
     suspend fun deleteNpc(email: String, id: String)

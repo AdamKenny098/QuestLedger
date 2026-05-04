@@ -62,6 +62,46 @@ class DMWorkspaceRepository @Inject constructor(
             .await()
     }
 
+    override suspend fun getCampaign(email: String, id: String): DMCampaignModel? {
+        return firestore.collection("users")
+            .document(email)
+            .collection("dm_campaigns")
+            .document(id)
+            .get()
+            .await()
+            .toObject(DMCampaignModel::class.java)
+    }
+
+    override suspend fun getQuest(email: String, id: String): DMQuestModel? {
+        return firestore.collection("users")
+            .document(email)
+            .collection("dm_quests")
+            .document(id)
+            .get()
+            .await()
+            .toObject(DMQuestModel::class.java)
+    }
+
+    override suspend fun getNpc(email: String, id: String): DMNpcModel? {
+        return firestore.collection("users")
+            .document(email)
+            .collection("dm_npcs")
+            .document(id)
+            .get()
+            .await()
+            .toObject(DMNpcModel::class.java)
+    }
+
+    override suspend fun getPlace(email: String, id: String): DMPlaceModel? {
+        return firestore.collection("users")
+            .document(email)
+            .collection("dm_places")
+            .document(id)
+            .get()
+            .await()
+            .toObject(DMPlaceModel::class.java)
+    }
+
     override suspend fun deleteCampaign(email: String, id: String) {
         firestore.collection("users")
             .document(email)
