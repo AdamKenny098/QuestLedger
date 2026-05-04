@@ -29,12 +29,15 @@ import ie.setu.questledger.data.compendium.CompendiumRepository
 import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.premade.PremadeTemplateRepository
 import ie.setu.questledger.data.premade.PremadeTemplateService
+import ie.setu.questledger.data.firestore.DMWorkspaceRepository
+import ie.setu.questledger.data.firestore.DMWorkspaceService
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
     private const val BASE_URL = "http://10.0.2.2:3000/"
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -122,4 +125,9 @@ object AppModule {
 
     @Provides
     fun providePremadeTemplateService(): PremadeTemplateService = PremadeTemplateRepository()
+
+    @Provides
+    fun provideDMWorkspaceService(
+        repository: DMWorkspaceRepository
+    ): DMWorkspaceService = repository
 }
