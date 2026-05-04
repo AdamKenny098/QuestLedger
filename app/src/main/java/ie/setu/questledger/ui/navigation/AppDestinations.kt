@@ -104,4 +104,60 @@ object DMWorkspace : AppDestination {
     override val route = "dm_workspace"
 }
 
+object DMCampaignEditor : AppDestination {
+    override val icon = Icons.Filled.AutoStories
+    override val label = "Campaign Editor"
+    override val route = "dm_campaign_editor?campaignId={campaignId}"
+
+    fun createRoute(campaignId: String? = null): String {
+        return if (campaignId.isNullOrBlank()) {
+            "dm_campaign_editor"
+        } else {
+            "dm_campaign_editor?campaignId=$campaignId"
+        }
+    }
+}
+
+object DMQuestEditor : AppDestination {
+    override val icon = Icons.Filled.AutoStories
+    override val label = "Quest Editor"
+    override val route = "dm_quest_editor?questId={questId}"
+
+    fun createRoute(questId: String? = null): String {
+        return if (questId.isNullOrBlank()) {
+            "dm_quest_editor"
+        } else {
+            "dm_quest_editor?questId=$questId"
+        }
+    }
+}
+
+object DMNpcEditor : AppDestination {
+    override val icon = Icons.Filled.AutoStories
+    override val label = "NPC Editor"
+    override val route = "dm_npc_editor?npcId={npcId}"
+
+    fun createRoute(npcId: String? = null): String {
+        return if (npcId.isNullOrBlank()) {
+            "dm_npc_editor"
+        } else {
+            "dm_npc_editor?npcId=$npcId"
+        }
+    }
+}
+
+object DMPlaceEditor : AppDestination {
+    override val icon = Icons.Filled.AutoStories
+    override val label = "Place Editor"
+    override val route = "dm_place_editor?placeId={placeId}"
+
+    fun createRoute(placeId: String? = null): String {
+        return if (placeId.isNullOrBlank()) {
+            "dm_place_editor"
+        } else {
+            "dm_place_editor?placeId=$placeId"
+        }
+    }
+}
+
 val bottomNavDestinations = listOf(Create, Roster, Dice, DMWorkspace, Profile, CampaignMap)

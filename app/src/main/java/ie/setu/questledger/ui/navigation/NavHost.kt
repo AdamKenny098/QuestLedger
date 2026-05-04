@@ -33,6 +33,7 @@ import ie.setu.questledger.ui.screens.dm.ScreenDMCampaignEditor
 import ie.setu.questledger.ui.screens.dm.ScreenDMQuestEditor
 import ie.setu.questledger.ui.screens.dm.ScreenDMNpcEditor
 import ie.setu.questledger.ui.screens.dm.ScreenDMPlaceEditor
+import androidx.navigation.navArgument
 
 @Composable
 fun QuestLedgerNavHost(
@@ -236,32 +237,76 @@ fun QuestLedgerNavHost(
 
             composable(route = DMWorkspace.route) {
                 ScreenDMWorkspace(
-                    onOpenCampaignEditor = { navController.navigate("dm_campaign_editor") },
-                    onOpenQuestEditor = { navController.navigate("dm_quest_editor") },
-                    onOpenNpcEditor = { navController.navigate("dm_npc_editor") },
-                    onOpenPlaceEditor = { navController.navigate("dm_place_editor") }
+                    onOpenCampaignEditor = { campaignId ->
+                        navController.navigate(DMCampaignEditor.createRoute(campaignId))
+                    },
+                    onOpenQuestEditor = { questId ->
+                        navController.navigate(DMQuestEditor.createRoute(questId))
+                    },
+                    onOpenNpcEditor = { npcId ->
+                        navController.navigate(DMNpcEditor.createRoute(npcId))
+                    },
+                    onOpenPlaceEditor = { placeId ->
+                        navController.navigate(DMPlaceEditor.createRoute(placeId))
+                    }
                 )
             }
 
-            composable(route = "dm_campaign_editor") {
+            composable(
+                route = DMCampaignEditor.route,
+                arguments = listOf(
+                    navArgument("campaignId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) {
                 ScreenDMCampaignEditor(
                     onDone = { navController.popBackStack() }
                 )
             }
 
-            composable(route = "dm_quest_editor") {
+            composable(
+                route = DMQuestEditor.route,
+                arguments = listOf(
+                    navArgument("questId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) {
                 ScreenDMQuestEditor(
                     onDone = { navController.popBackStack() }
                 )
             }
 
-            composable(route = "dm_npc_editor") {
+            composable(
+                route = DMNpcEditor.route,
+                arguments = listOf(
+                    navArgument("npcId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) {
                 ScreenDMNpcEditor(
                     onDone = { navController.popBackStack() }
                 )
             }
 
-            composable(route = "dm_place_editor") {
+            composable(
+                route = DMPlaceEditor.route,
+                arguments = listOf(
+                    navArgument("placeId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) {
                 ScreenDMPlaceEditor(
                     onDone = { navController.popBackStack() }
                 )
