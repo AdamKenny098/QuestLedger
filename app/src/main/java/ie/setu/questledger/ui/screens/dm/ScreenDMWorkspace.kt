@@ -1,5 +1,6 @@
 package ie.setu.questledger.ui.screens.dm
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,10 +23,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun ScreenDMWorkspace(
-    onOpenCampaignEditor: () -> Unit,
-    onOpenQuestEditor: () -> Unit,
-    onOpenNpcEditor: () -> Unit,
-    onOpenPlaceEditor: () -> Unit,
+    onOpenCampaignEditor: (String?) -> Unit,
+    onOpenQuestEditor: (String?) -> Unit,
+    onOpenNpcEditor: (String?) -> Unit,
+    onOpenPlaceEditor: (String?) -> Unit,
     vm: DMWorkspaceViewModel = hiltViewModel()
 ) {
     val campaigns by vm.campaigns.collectAsState()
@@ -50,7 +51,7 @@ fun ScreenDMWorkspace(
                 Spacer(Modifier.height(16.dp))
 
                 Button(
-                    onClick = onOpenCampaignEditor,
+                    onClick = { onOpenCampaignEditor(null) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Add Campaign")
@@ -59,7 +60,7 @@ fun ScreenDMWorkspace(
                 Spacer(Modifier.height(8.dp))
 
                 Button(
-                    onClick = onOpenQuestEditor,
+                    onClick = { onOpenQuestEditor(null) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Add Quest")
@@ -68,7 +69,7 @@ fun ScreenDMWorkspace(
                 Spacer(Modifier.height(8.dp))
 
                 Button(
-                    onClick = onOpenNpcEditor,
+                    onClick = { onOpenNpcEditor(null) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Add NPC")
@@ -77,7 +78,7 @@ fun ScreenDMWorkspace(
                 Spacer(Modifier.height(8.dp))
 
                 Button(
-                    onClick = onOpenPlaceEditor,
+                    onClick = { onOpenPlaceEditor(null) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Add Place")
@@ -94,6 +95,7 @@ fun ScreenDMWorkspace(
                     title = campaign.title,
                     subtitle = "${campaign.setting} • Sessions ${campaign.sessionCount}",
                     body = campaign.summary,
+                    onClick = { onOpenCampaignEditor(campaign.id) },
                     onDelete = { vm.deleteCampaign(campaign.id) }
                 )
                 Spacer(Modifier.height(12.dp))
@@ -110,6 +112,7 @@ fun ScreenDMWorkspace(
                     title = quest.title,
                     subtitle = quest.status,
                     body = quest.summary,
+                    onClick = { onOpenQuestEditor(quest.id) },
                     onDelete = { vm.deleteQuest(quest.id) }
                 )
                 Spacer(Modifier.height(12.dp))
@@ -126,6 +129,7 @@ fun ScreenDMWorkspace(
                     title = npc.name,
                     subtitle = "${npc.role} • ${npc.faction}",
                     body = npc.notes,
+                    onClick = { onOpenNpcEditor(npc.id) },
                     onDelete = { vm.deleteNpc(npc.id) }
                 )
                 Spacer(Modifier.height(12.dp))
@@ -142,6 +146,7 @@ fun ScreenDMWorkspace(
                     title = place.name,
                     subtitle = place.region,
                     body = place.description,
+                    onClick = { onOpenPlaceEditor(place.id) },
                     onDelete = { vm.deletePlace(place.id) }
                 )
                 Spacer(Modifier.height(12.dp))
@@ -155,12 +160,15 @@ private fun DMItemCard(
     title: String,
     subtitle: String,
     body: String,
+    onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     Surface(
         tonalElevation = 2.dp,
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
