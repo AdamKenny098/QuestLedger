@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -21,13 +22,16 @@ import ie.setu.questledger.models.dm.DMNpcModel
 @Composable
 fun ScreenDMNpcEditor(
     onDone: () -> Unit,
-    vm: DMWorkspaceViewModel = hiltViewModel()
+    vm: DMEntityEditorViewModel = hiltViewModel()
 ) {
-    var name by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf("") }
-    var faction by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
-    var statSummary by remember { mutableStateOf("") }
+    val existing by vm.npc
+
+    var name by remember(existing.id) { mutableStateOf(existing.name) }
+    var role by remember(existing.id) { mutableStateOf(existing.role) }
+    var faction by remember(existing.id) { mutableStateOf(existing.faction) }
+    var notes by remember(existing.id) { mutableStateOf(existing.notes) }
+    var statSummary by remember(existing.id) { mutableStateOf(existing.statSummary) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
@@ -35,67 +39,59 @@ fun ScreenDMNpcEditor(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("New NPC", style = MaterialTheme.typography.titleLarge)
+            Text(
+                if (existing.id.isBlank()) "New NPC" else "Edit NPC",
+                style = MaterialTheme.typography.titleLarge
+            )
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            OutlinedTextField(name, { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = role,
-                onValueChange = { role = it },
-                label = { Text("Role") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            OutlinedTextField(role, { role = it }, label = { Text("Role") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = faction,
-                onValueChange = { faction = it },
-                label = { Text("Faction") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            OutlinedTextField(faction, { faction = it }, label = { Text("Faction") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                label = { Text("Notes") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = statSummary,
-                onValueChange = { statSummary = it },
-                label = { Text("Stats if needed") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            OutlinedTextField(statSummary, { statSummary = it }, label = { Text("Stats if needed") }, modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(16.dp))
 
+            if (vm.isLoading.value) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+            }
+
+            localError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (vm.isErr.value && vm.error.value.isNotBlank()) {
+                Text(vm.error.value, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(8.dp))
+            }
+
             Button(
                 onClick = {
-                    vm.saveNpc(
-                        DMNpcModel(
-                            name = name.trim(),
-                            role = role.trim(),
-                            faction = faction.trim(),
-                            notes = notes.trim(),
-                            statSummary = statSummary.trim()
+                    if (name.isBlank()) {
+                        localError = "Name is required"
+                    } else {
+                        localError = null
+                        vm.saveNpc(
+                            DMNpcModel(
+                                id = existing.id,
+                                name = name.trim(),
+                                role = role.trim(),
+                                faction = faction.trim(),
+                                notes = notes.trim(),
+                                statSummary = statSummary.trim()
+                            ),
+                            onDone
                         )
-                    )
-                    onDone()
+                    }
                 },
+                enabled = !vm.isLoading.value,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save NPC")

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -21,12 +22,15 @@ import ie.setu.questledger.models.dm.DMCampaignModel
 @Composable
 fun ScreenDMCampaignEditor(
     onDone: () -> Unit,
-    vm: DMWorkspaceViewModel = hiltViewModel()
+    vm: DMEntityEditorViewModel = hiltViewModel()
 ) {
-    var title by remember { mutableStateOf("") }
-    var setting by remember { mutableStateOf("") }
-    var summary by remember { mutableStateOf("") }
-    var sessionCountText by remember { mutableStateOf("0") }
+    val existing by vm.campaign
+
+    var title by remember(existing.id) { mutableStateOf(existing.title) }
+    var setting by remember(existing.id) { mutableStateOf(existing.setting) }
+    var summary by remember(existing.id) { mutableStateOf(existing.summary) }
+    var sessionCountText by remember(existing.id) { mutableStateOf(existing.sessionCount.toString()) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
@@ -34,36 +38,18 @@ fun ScreenDMCampaignEditor(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("New Campaign", style = MaterialTheme.typography.titleLarge)
+            Text(
+                if (existing.id.isBlank()) "New Campaign" else "Edit Campaign",
+                style = MaterialTheme.typography.titleLarge
+            )
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Title") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            OutlinedTextField(title, { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = setting,
-                onValueChange = { setting = it },
-                label = { Text("Setting") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            OutlinedTextField(setting, { setting = it }, label = { Text("Setting") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = summary,
-                onValueChange = { summary = it },
-                label = { Text("Summary") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            OutlinedTextField(summary, { summary = it }, label = { Text("Summary") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-
             OutlinedTextField(
                 value = sessionCountText,
                 onValueChange = { sessionCountText = it.filter(Char::isDigit) },
@@ -73,18 +59,40 @@ fun ScreenDMCampaignEditor(
 
             Spacer(Modifier.height(16.dp))
 
+            if (vm.isLoading.value) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+            }
+
+            localError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (vm.isErr.value && vm.error.value.isNotBlank()) {
+                Text(vm.error.value, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(8.dp))
+            }
+
             Button(
                 onClick = {
-                    vm.saveCampaign(
-                        DMCampaignModel(
-                            title = title.trim(),
-                            setting = setting.trim(),
-                            summary = summary.trim(),
-                            sessionCount = sessionCountText.toIntOrNull() ?: 0
+                    if (title.isBlank()) {
+                        localError = "Title is required"
+                    } else {
+                        localError = null
+                        vm.saveCampaign(
+                            DMCampaignModel(
+                                id = existing.id,
+                                title = title.trim(),
+                                setting = setting.trim(),
+                                summary = summary.trim(),
+                                sessionCount = sessionCountText.toIntOrNull() ?: 0
+                            ),
+                            onDone
                         )
-                    )
-                    onDone()
+                    }
                 },
+                enabled = !vm.isLoading.value,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save Campaign")
