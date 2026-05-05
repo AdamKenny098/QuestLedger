@@ -14,7 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -62,16 +61,12 @@ fun CampaignMapScreen(
         when {
             quests.isNotEmpty() -> {
                 val first = LatLng(quests.first().latitude, quests.first().longitude)
-                cameraPositionState.animate(
-                    CameraUpdateFactory.newLatLngZoom(first, 6f)
-                )
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(first, 6f)
             }
 
             places.isNotEmpty() -> {
                 val first = LatLng(places.first().latitude, places.first().longitude)
-                cameraPositionState.animate(
-                    CameraUpdateFactory.newLatLngZoom(first, 6f)
-                )
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(first, 6f)
             }
         }
     }
