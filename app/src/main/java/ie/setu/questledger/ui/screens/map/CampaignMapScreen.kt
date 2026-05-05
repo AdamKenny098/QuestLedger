@@ -1,5 +1,6 @@
 package ie.setu.questledger.ui.screens.map
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,16 +30,16 @@ fun CampaignMapScreen(
     vm: CampaignMapViewModel = hiltViewModel()
 ) {
     val quests = vm.quests.value
+    val places = vm.places.value
     val isLoading = vm.isLoading.value
     val isErr = vm.isErr.value
     val error = vm.error.value
 
-    val startPosition =
-        if (quests.isNotEmpty()) {
-            LatLng(quests.first().latitude, quests.first().longitude)
-        } else {
-            vm.defaultCentre
-        }
+    val startPosition = when {
+        quests.isNotEmpty() -> LatLng(quests.first().latitude, quests.first().longitude)
+        places.isNotEmpty() -> LatLng(places.first().latitude, places.first().longitude)
+        else -> vm.defaultCentre
+    }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(startPosition, 6f)
@@ -57,12 +58,21 @@ fun CampaignMapScreen(
         )
     }
 
-    LaunchedEffect(quests) {
-        if (quests.isNotEmpty()) {
-            val first = LatLng(quests.first().latitude, quests.first().longitude)
-            cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(first, 6f)
-            )
+    LaunchedEffect(quests, places) {
+        when {
+            quests.isNotEmpty() -> {
+                val first = LatLng(quests.first().latitude, quests.first().longitude)
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLngZoom(first, 6f)
+                )
+            }
+
+            places.isNotEmpty() -> {
+                val first = LatLng(places.first().latitude, places.first().longitude)
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLngZoom(first, 6f)
+                )
+            }
         }
     }
 
@@ -82,28 +92,46 @@ fun CampaignMapScreen(
                 )
             }
 
-            quests.isEmpty() -> {
+            quests.isEmpty() && places.isEmpty() -> {
                 Text(
-                    text = "No quest markers yet.",
+                    text = "No quest or place markers yet.",
                     modifier = Modifier.padding(24.dp)
                 )
             }
 
             else -> {
-                GoogleMap(
-                    modifier = Modifier.fillMaxSize(),
-                    cameraPositionState = cameraPositionState,
-                    uiSettings = uiSettings,
-                    properties = properties
-                ) {
-                    quests.forEach { quest ->
-                        Marker(
-                            state = MarkerState(
-                                position = LatLng(quest.latitude, quest.longitude)
-                            ),
-                            title = quest.title,
-                            snippet = "${quest.status} • ${quest.description}"
-                        )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Text(
+                        text = "Quest markers: ${quests.size} • Place markers: ${places.size}",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        uiSettings = uiSettings,
+                        properties = properties
+                    ) {
+                        quests.forEach { quest ->
+                            Marker(
+                                state = MarkerState(
+                                    position = LatLng(quest.latitude, quest.longitude)
+                                ),
+                                title = quest.title,
+                                snippet = "Quest • ${quest.status} • ${quest.description}"
+                            )
+                        }
+
+                        places.forEach { place ->
+                            Marker(
+                                state = MarkerState(
+                                    position = LatLng(place.latitude, place.longitude)
+                                ),
+                                title = place.title,
+                                snippet = "Place • ${place.region} • ${place.description}"
+                            )
+                        }
                     }
                 }
             }
