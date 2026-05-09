@@ -8,5 +8,6 @@ data class DMQuestModel(
     val status: String = "Open",
     val linkedCampaignId: String = "",
     val linkedNpcIds: List<String> = emptyList(),
-    val linkedPlaceIds: List<String> = emptyList()
+    val linkedPlaceIds: List<String> = emptyList(),
+    val mapCoordinates: String = ""
 )

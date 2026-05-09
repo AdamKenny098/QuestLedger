@@ -21,8 +21,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import ie.setu.questledger.data.firestore.FirestoreRepository
 import ie.setu.questledger.data.firestore.FirestoreService
-import ie.setu.questledger.data.firestore.QuestFirestoreRepository
-import ie.setu.questledger.data.firestore.QuestFirestoreService
 import ie.setu.questledger.data.storage.StorageRepository
 import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.data.compendium.CompendiumRepository
@@ -114,11 +112,6 @@ object AppModule {
     ): StorageService = StorageRepository(
         storage = firebaseStorage
     )
-
-    @Provides
-    fun provideQuestFirestoreService(
-        firestore: FirebaseFirestore
-    ): QuestFirestoreService = QuestFirestoreRepository(firestore)
 
     @Provides
     fun provideCompendiumService(): CompendiumService = CompendiumRepository()

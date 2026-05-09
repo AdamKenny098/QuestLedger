@@ -29,6 +29,7 @@ fun ScreenDMQuestEditor(
     var title by remember(existing.id) { mutableStateOf(existing.title) }
     var summary by remember(existing.id) { mutableStateOf(existing.summary) }
     var status by remember(existing.id) { mutableStateOf(existing.status) }
+    var mapCoordinates by remember(existing.id) { mutableStateOf(existing.mapCoordinates) }
     var localError by remember { mutableStateOf<String?>(null) }
 
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -43,11 +44,39 @@ fun ScreenDMQuestEditor(
             )
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(title, { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(summary, { summary = it }, label = { Text("Summary") }, modifier = Modifier.fillMaxWidth())
+
+            OutlinedTextField(
+                value = summary,
+                onValueChange = { summary = it },
+                label = { Text("Summary") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(status, { status = it }, label = { Text("Status") }, modifier = Modifier.fillMaxWidth())
+
+            OutlinedTextField(
+                value = status,
+                onValueChange = { status = it },
+                label = { Text("Status") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = mapCoordinates,
+                onValueChange = { mapCoordinates = it },
+                label = { Text("Map Coordinates (lat,lng)") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(Modifier.height(16.dp))
 
@@ -77,7 +106,11 @@ fun ScreenDMQuestEditor(
                                 id = existing.id,
                                 title = title.trim(),
                                 summary = summary.trim(),
-                                status = status.trim()
+                                status = status.trim(),
+                                linkedCampaignId = existing.linkedCampaignId,
+                                linkedNpcIds = existing.linkedNpcIds,
+                                linkedPlaceIds = existing.linkedPlaceIds,
+                                mapCoordinates = mapCoordinates.trim()
                             ),
                             onDone
                         )

@@ -7,19 +7,17 @@ import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.firestore.DMWorkspaceService
-import ie.setu.questledger.data.firestore.QuestFirestoreService
-import ie.setu.questledger.models.quests.QuestModel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class CampaignMapViewModel @Inject constructor(
-    private val questRepository: QuestFirestoreService,
     private val dmWorkspaceService: DMWorkspaceService,
     private val authService: AuthService
 ) : ViewModel() {
 
-    val quests = mutableStateOf<List<QuestModel>>(emptyList())
+    val quests = mutableStateOf<List<DMQuestMapMarker>>(emptyList())
     val places = mutableStateOf<List<DMPlaceMapMarker>>(emptyList())
 
     val isLoading = mutableStateOf(false)
@@ -41,13 +39,13 @@ class CampaignMapViewModel @Inject constructor(
 
                 val email = authService.email
 
-                val loadedQuests = questRepository.getAll(email)
-                    .filter { !(it.latitude == 0.0 && it.longitude == 0.0) }
-
-                quests.value = loadedQuests
-
-                dmWorkspaceService.getPlaces(email).collect { dmPlaces ->
+                combine(
+                    dmWorkspaceService.getQuests(email),
+                    dmWorkspaceService.getPlaces(email)
+                ) { dmQuests, dmPlaces ->
+                    quests.value = DMQuestMapMapper.mapQuests(dmQuests)
                     places.value = DMPlaceMapMapper.mapPlaces(dmPlaces)
+                }.collect {
                     isLoading.value = false
                 }
             } catch (e: Exception) {
