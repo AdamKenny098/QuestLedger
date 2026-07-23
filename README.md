@@ -1,1 +1,39 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/DQNMaVzZ)
+# QuestLedger
+
+QuestLedger is a Kotlin Android app for creating, managing, and customizing tabletop RPG characters and campaign tools.
+
+## Current Features
+- Firebase login/register
+- Character roster
+- Quick character setup
+- Full character setup
+- Premade characters
+- Character details/editing
+- Dice roller
+- Spellbook
+- Inventory system
+- DM workspace
+- Campaign map
+
+## Tech Stack
+- Kotlin
+- Jetpack Compose
+- Hilt
+- Firebase Auth
+- Firestore
+- Firebase Storage
+- Room
+- Retrofit
+- Maps Compose
+
+## Setup
+1. Open in Android Studio
+2. Add Firebase config
+3. Run app
+4. Optional local API runs on http://10.0.2.2:3000/
+
+## Roadmap
+- Stabilize character creation
+- Clean data source strategy
+- Add custom ruleset model
+- Add custom races/classes/skills/abilities
