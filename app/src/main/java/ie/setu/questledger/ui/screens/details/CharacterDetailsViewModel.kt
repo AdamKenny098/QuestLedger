@@ -223,6 +223,7 @@ class CharacterDetailsViewModel @Inject constructor(
                     wisdom = wisdom,
                     charisma = charisma,
                     inventory = character.value.inventory,
+                    skillProficiencyIds = character.value.skillProficiencyIds,
                     knownSpellIds = character.value.knownSpellIds,
                     preparedSpellIds = character.value.preparedSpellIds
                 )

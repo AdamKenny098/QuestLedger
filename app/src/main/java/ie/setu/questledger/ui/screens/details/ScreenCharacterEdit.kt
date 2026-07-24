@@ -104,6 +104,7 @@ fun ScreenCharacterEdit(
         armourBonus = vm.character.value.armourBonus,
         shieldBonus = vm.character.value.shieldBonus,
         inventory = vm.character.value.inventory,
+        skillProficiencyIds = vm.character.value.skillProficiencyIds,
         knownSpellIds = vm.character.value.knownSpellIds,
         preparedSpellIds = vm.character.value.preparedSpellIds
     )
@@ -196,7 +197,7 @@ fun ScreenCharacterEdit(
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = "Bonuses: ${CompendiumLookup.formatStatBonuses(raceDef.statBonuses)} • Speed: ${raceDef.speed}",
+                    text = "Bonuses: ${CompendiumLookup.formatStatBonuses(raceDef)} • Speed: ${raceDef.speed}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

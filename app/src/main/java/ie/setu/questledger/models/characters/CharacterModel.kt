@@ -22,6 +22,7 @@ data class CharacterModel(
     val armourBonus: Int = 0,
     val shieldBonus: Int = 0,
     val inventory: CharacterInventory = CharacterInventory(),
+    val skillProficiencyIds: List<String> = emptyList(),
     val knownSpellIds: List<String> = emptyList(),
     val preparedSpellIds: List<String> = emptyList()
 )

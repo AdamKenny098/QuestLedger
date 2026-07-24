@@ -5,6 +5,9 @@ data class RaceDefinition(
     val name: String,
     val description: String,
     val statBonuses: Map<AbilityType, Int>,
+    val flexibleStatBonuses: List<Int> = emptyList(),
     val speed: Int,
-    val passiveTraits: List<String>
+    val size: String = "Medium",
+    val passiveTraits: List<String>,
+    val languages: List<String> = listOf("Common")
 )

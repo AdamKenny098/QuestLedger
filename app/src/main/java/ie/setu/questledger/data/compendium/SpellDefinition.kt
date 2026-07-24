@@ -4,6 +4,7 @@ data class SpellDefinition(
     val id: String,
     val name: String,
     val level: Int,
+    val classIds: Set<String>,
     val school: SpellSchool,
     val castingTime: String,
     val range: String,

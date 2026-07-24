@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
-import ie.setu.questledger.data.compendium.AbilityType
 import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.firestore.FirestoreService
 import ie.setu.questledger.data.rules.FullSetupEngine
@@ -33,46 +32,33 @@ class FullSetupViewModel @Inject constructor(
     fun getSpells() = compendiumService.getSpells()
 
     fun getSuggestedProficienciesForClass(classId: String): List<String> {
-        return when (classId.lowercase()) {
-            "fighter" -> listOf("Athletics", "Intimidation", "Survival", "Perception")
-            "wizard" -> listOf("Arcana", "History", "Investigation", "Insight")
-            "cleric" -> listOf("Religion", "Insight", "Medicine", "Persuasion")
-            "rogue" -> listOf("Stealth", "Acrobatics", "Sleight of Hand", "Perception")
-            else -> listOf("Perception", "Insight", "Survival")
-        }
+        return compendiumService.getClassById(classId)?.skillProficiencies.orEmpty()
+    }
+
+    fun getProficiencyChoiceCount(classId: String): Int {
+        return compendiumService.getClassById(classId)?.skillChoiceCount ?: 0
     }
 
     fun getSuggestedWeaponIdsForClass(classId: String): List<String> {
-        return when (classId.lowercase()) {
-            "fighter" -> listOf("longsword", "dagger")
-            "wizard" -> listOf("quarterstaff", "dagger")
-            "cleric" -> listOf("quarterstaff", "mace")
-            "rogue" -> listOf("dagger", "shortsword")
-            else -> listOf("dagger")
-        }
+        return compendiumService.getClassById(classId)?.starterWeaponIds.orEmpty()
     }
 
     fun getSuggestedArmourIdsForClass(classId: String): List<String> {
-        return when (classId.lowercase()) {
-            "fighter" -> listOf("chainmail", "leather")
-            "cleric" -> listOf("chainshirt", "leather")
-            "rogue" -> listOf("leather")
-            "wizard" -> emptyList()
-            else -> listOf("leather")
-        }
+        return compendiumService.getClassById(classId)?.starterArmourIds.orEmpty()
     }
 
     fun getSuggestedSpellIdsForClass(classId: String): List<String> {
-        return when (classId.lowercase()) {
-            "wizard" -> listOf("fire_bolt", "magic_missile", "shield")
-            "cleric" -> listOf("sacred_flame", "cure_wounds", "bless")
-            else -> emptyList()
-        }
+        return compendiumService.getClassById(classId)?.starterSpellIds.orEmpty()
     }
 
     fun classUsesSpells(classId: String): Boolean {
         val clazz = compendiumService.getClassById(classId) ?: return false
-        return clazz.spellcastingAbility != AbilityType.NONE
+        return clazz.canCastAt(level = 1)
+    }
+
+    fun classCanStartWithShield(classId: String): Boolean {
+        val clazz = compendiumService.getClassById(classId) ?: return false
+        return ie.setu.questledger.data.compendium.ArmourType.SHIELD in clazz.armourProficiencies
     }
 
     fun buildPreview(config: FullSetupConfig): FullSetupResult? {

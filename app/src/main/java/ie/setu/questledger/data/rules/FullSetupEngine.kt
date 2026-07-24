@@ -2,17 +2,14 @@ package ie.setu.questledger.data.rules
 
 import ie.setu.questledger.data.compendium.AbilityType
 import ie.setu.questledger.data.compendium.ArmourDefinition
+import ie.setu.questledger.data.compendium.ArmourType
 import ie.setu.questledger.data.compendium.ClassDefinition
 import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.compendium.SpellDefinition
 import ie.setu.questledger.data.compendium.WeaponDefinition
-import ie.setu.questledger.models.inventory.CharacterInventory
-import ie.setu.questledger.models.characters.CharacterModel
-import ie.setu.questledger.models.inventory.EquipmentLoadout
 import ie.setu.questledger.models.FullSetupConfig
-import ie.setu.questledger.models.inventory.InventoryItemModel
-import ie.setu.questledger.models.inventory.InventoryItemType
+import ie.setu.questledger.models.characters.CharacterModel
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,69 +34,86 @@ class FullSetupEngine @Inject constructor(
         val race = requireNotNull(compendiumService.getRaceById(config.raceId)) {
             "Unknown race: ${config.raceId}"
         }
-
         val clazz = requireNotNull(compendiumService.getClassById(config.classId)) {
             "Unknown class: ${config.classId}"
         }
+        val level = config.level.coerceIn(1, 20)
 
         validateScores(config)
-        validateSpellSelection(config, clazz)
+        validateProficiencies(config, clazz)
+        validateGear(config, clazz)
+        validateSpellSelection(config, clazz, level)
 
-        val starterWeapon = config.starterWeaponId?.let { compendiumService.getWeaponById(it) }
-        val starterArmour = config.starterArmourId?.let { compendiumService.getArmourById(it) }
-        val starterSpells = config.starterSpellIds.mapNotNull { compendiumService.getSpellById(it) }
+        val starterWeapon = config.starterWeaponId?.let { weaponId ->
+            requireNotNull(compendiumService.getWeaponById(weaponId)) {
+                "Unknown starter weapon: $weaponId"
+            }
+        }
+        val starterArmour = config.starterArmourId?.let { armourId ->
+            requireNotNull(compendiumService.getArmourById(armourId)) {
+                "Unknown starter armour: $armourId"
+            }
+        }
+        val starterSpells = config.starterSpellIds.map { spellId ->
+            requireNotNull(compendiumService.getSpellById(spellId)) {
+                "Unknown starter spell: $spellId"
+            }
+        }
 
-        val inventory = buildInventory(
-            characterClassId = clazz.id,
+        val finalScores = AbilityScoreRules.applyRaceBonuses(
+            baseScores = mapOf(
+                AbilityType.STRENGTH to config.strength,
+                AbilityType.DEXTERITY to config.dexterity,
+                AbilityType.CONSTITUTION to config.constitution,
+                AbilityType.INTELLIGENCE to config.intelligence,
+                AbilityType.WISDOM to config.wisdom,
+                AbilityType.CHARISMA to config.charisma
+            ),
+            race = race,
+            classPriority = clazz.quickBuildAbilityPriority
+        )
+
+        val inventory = StarterInventoryFactory.build(
+            characterClass = clazz,
             starterWeapon = starterWeapon,
             starterArmour = starterArmour,
             hasShield = config.hasShield,
             starterSpells = starterSpells,
-            strengthScore = config.strength
+            strengthScore = finalScores.getValue(AbilityType.STRENGTH)
         )
 
         val character = CharacterModel(
             name = config.name.trim(),
             characterClass = clazz.id,
             race = race.id,
-            level = config.level.coerceIn(1, 20),
-            notes = "",
-            strength = config.strength,
-            dexterity = config.dexterity,
-            constitution = config.constitution,
-            intelligence = config.intelligence,
-            wisdom = config.wisdom,
-            charisma = config.charisma,
-            armourBonus = 0,
-            shieldBonus = 0,
+            level = level,
+            strength = finalScores.getValue(AbilityType.STRENGTH),
+            dexterity = finalScores.getValue(AbilityType.DEXTERITY),
+            constitution = finalScores.getValue(AbilityType.CONSTITUTION),
+            intelligence = finalScores.getValue(AbilityType.INTELLIGENCE),
+            wisdom = finalScores.getValue(AbilityType.WISDOM),
+            charisma = finalScores.getValue(AbilityType.CHARISMA),
             inventory = inventory,
+            skillProficiencyIds = config.selectedProficiencyIds,
             knownSpellIds = starterSpells.map { it.id },
             preparedSpellIds = starterSpells.map { it.id }
         )
 
         val derived = CharacterStatEngine.build(character)
-
-        val spellSlotsSummary = if (derived.spellSlotsByLevel.isEmpty()) {
-            "None"
-        } else {
-            derived.spellSlotsByLevel.mapIndexed { index, count ->
-                "L${index + 1} x$count"
-            }.joinToString(", ")
-        }
+        val spellSlotsSummary = formatSpellSlots(derived.spellSlotsByLevel)
 
         val summaryLines = buildList {
             add("Full Setup Build")
             add("Race: ${race.name}")
             add("Class: ${clazz.name}")
             add(
-                "Stats: STR ${config.strength}, DEX ${config.dexterity}, CON ${config.constitution}, " +
-                        "INT ${config.intelligence}, WIS ${config.wisdom}, CHA ${config.charisma}"
+                "Final Stats: STR ${character.strength}, DEX ${character.dexterity}, " +
+                    "CON ${character.constitution}, INT ${character.intelligence}, " +
+                    "WIS ${character.wisdom}, CHA ${character.charisma}"
             )
-
             if (config.selectedProficiencyIds.isNotEmpty()) {
                 add("Proficiencies: ${config.selectedProficiencyIds.joinToString()}")
             }
-
             add("Starter Weapon: ${starterWeapon?.name ?: "None"}")
             add("Starter Armour: ${starterArmour?.name ?: "None"}")
             add("Shield: ${if (config.hasShield) "Yes" else "No"}")
@@ -114,20 +128,16 @@ class FullSetupEngine @Inject constructor(
             add("Speed: ${derived.speed}")
             add("Hit Die: d${derived.hitDie}")
             add("Proficiency Bonus: +${derived.proficiencyBonus}")
-
             if (starterSpells.isNotEmpty()) {
                 add("Starter Spells: ${starterSpells.joinToString { it.name }}")
             }
-
-            if (derived.spellAttackBonus != 0 || derived.spellSaveDc != 0) {
+            if (derived.spellcastingAbilityLabel != null) {
                 add("Spell Attack: ${formatSigned(derived.spellAttackBonus)}")
                 add("Spell Save DC: ${derived.spellSaveDc}")
             }
-
             if (derived.unlockedFeatures.isNotEmpty()) {
                 add("Unlocked Features: ${derived.unlockedFeatures.joinToString()}")
             }
-
             add("Spell Slots: $spellSlotsSummary")
         }
 
@@ -147,137 +157,70 @@ class FullSetupEngine @Inject constructor(
         )
     }
 
-    private fun buildInventory(
-        characterClassId: String,
-        starterWeapon: WeaponDefinition?,
-        starterArmour: ArmourDefinition?,
-        hasShield: Boolean,
-        starterSpells: List<SpellDefinition>,
-        strengthScore: Int
-    ): CharacterInventory {
-        val items = mutableListOf<InventoryItemModel>()
-
-        val weaponItem = starterWeapon?.toInventoryWeapon()
-        if (weaponItem != null) items += weaponItem
-
-        val armourItem = starterArmour?.toInventoryArmour()
-        if (armourItem != null) items += armourItem
-
-        val shieldItem = if (hasShield) {
-            InventoryItemModel(
-                id = "shield_basic",
-                name = "Shield",
-                type = InventoryItemType.SHIELD,
-                slotCost = 2,
-                quantity = 1,
-                shieldBonus = 2
-            )
-        } else null
-        if (shieldItem != null) items += shieldItem
-
-        starterSpells.forEach { spell ->
-            items += InventoryItemModel(
-                id = "spell_${spell.id}",
-                name = spell.name,
-                type = InventoryItemType.BACKPACK_ITEM,
-                slotCost = 0,
-                quantity = 1
-            )
-        }
-
-        val focusItem = when (characterClassId.lowercase()) {
-            "wizard", "cleric" -> InventoryItemModel(
-                id = "${characterClassId}_focus",
-                name = if (characterClassId.equals("wizard", true)) "Arcane Focus" else "Holy Symbol",
-                type = InventoryItemType.SPELL_FOCUS,
-                slotCost = 1,
-                quantity = 1
-            )
-            else -> null
-        }
-        if (focusItem != null) items += focusItem
-
-        items += InventoryItemModel(
-            id = "backpack_basic",
-            name = "Backpack",
-            type = InventoryItemType.BACKPACK_ITEM,
-            slotCost = 1,
-            quantity = 1
-        )
-
-        return CharacterInventory(
-            capacitySlots = 10 + strengthScore,
-            items = items,
-            equipped = EquipmentLoadout(
-                weaponId = weaponItem?.id,
-                armourId = armourItem?.id,
-                offhandId = shieldItem?.id,
-                spellFocusId = focusItem?.id
-            )
-        )
-    }
-
-    private fun WeaponDefinition.toInventoryWeapon(): InventoryItemModel {
-        return InventoryItemModel(
-            id = id,
-            name = name,
-            type = InventoryItemType.WEAPON,
-            slotCost = 2,
-            quantity = 1,
-            attackBonus = 0,
-            damageDice = damageDice
-        )
-    }
-
-    private fun ArmourDefinition.toInventoryArmour(): InventoryItemModel {
-        return InventoryItemModel(
-            id = id,
-            name = name,
-            type = InventoryItemType.ARMOUR,
-            slotCost = 3,
-            quantity = 1,
-            armourBonus = (baseAc - 10).coerceAtLeast(0)
-        )
-    }
-
-
     private fun validateScores(config: FullSetupConfig) {
-        val scores = listOf(
-            config.strength,
-            config.dexterity,
-            config.constitution,
-            config.intelligence,
-            config.wisdom,
-            config.charisma
-        )
+        require(
+            listOf(
+                config.strength,
+                config.dexterity,
+                config.constitution,
+                config.intelligence,
+                config.wisdom,
+                config.charisma
+            ).all { it in 8..18 }
+        ) {
+            "Ability scores must stay between 8 and 18 before racial bonuses"
+        }
+    }
 
-        require(scores.all { it in 8..18 }) {
-            "Ability scores must stay between 8 and 18"
+    private fun validateProficiencies(config: FullSetupConfig, clazz: ClassDefinition) {
+        require(config.selectedProficiencyIds.distinct().size == config.selectedProficiencyIds.size) {
+            "A skill proficiency cannot be selected twice"
+        }
+        require(config.selectedProficiencyIds.size <= clazz.skillChoiceCount) {
+            "${clazz.name} can choose ${clazz.skillChoiceCount} skill proficiencies"
+        }
+        require(config.selectedProficiencyIds.all { it in clazz.skillProficiencies }) {
+            "One or more selected skills are not available to ${clazz.name}"
+        }
+    }
+
+    private fun validateGear(config: FullSetupConfig, clazz: ClassDefinition) {
+        require(config.starterWeaponId == null || config.starterWeaponId in clazz.starterWeaponIds) {
+            "Selected weapon is not a ${clazz.name} starter option"
+        }
+        require(config.starterArmourId == null || config.starterArmourId in clazz.starterArmourIds) {
+            "Selected armour is not a ${clazz.name} starter option"
+        }
+        require(!config.hasShield || ArmourType.SHIELD in clazz.armourProficiencies) {
+            "${clazz.name} is not proficient with shields"
         }
     }
 
     private fun validateSpellSelection(
         config: FullSetupConfig,
-        clazz: ClassDefinition
+        clazz: ClassDefinition,
+        level: Int
     ) {
-        val usesSpells = clazz.spellcastingAbility != AbilityType.NONE
+        if (!clazz.canCastAt(level)) {
+            require(config.starterSpellIds.isEmpty()) {
+                "${clazz.name} does not cast spells at level $level"
+            }
+            return
+        }
 
-        if (!usesSpells && config.starterSpellIds.isNotEmpty()) {
-            throw IllegalArgumentException("This class should not start with spells")
+        val spells = config.starterSpellIds.mapNotNull(compendiumService::getSpellById)
+        require(spells.size == config.starterSpellIds.size) {
+            "One or more selected spells do not exist"
+        }
+        require(spells.all { clazz.id in it.classIds }) {
+            "One or more selected spells are not available to ${clazz.name}"
         }
     }
 
-    private fun formatSpellSlots(clazz: ClassDefinition, level: Int): String {
-        val slots = clazz.spellSlotProgression[level.coerceIn(1, 20)] ?: emptyList()
-        if (slots.isEmpty()) return "None"
-
+    private fun formatSpellSlots(slots: List<Int>): String {
         return slots.mapIndexedNotNull { index, count ->
             if (count > 0) "L${index + 1} x$count" else null
-        }.joinToString(", ")
-    }
-
-    private fun armourBonusFromDefinition(armour: ArmourDefinition): Int {
-        return (armour.baseAc - 10).coerceAtLeast(0)
+        }.joinToString(", ").ifBlank { "None" }
     }
 
     private fun formatSigned(value: Int): String {

@@ -21,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -74,6 +75,21 @@ fun ScreenFullSetup(
     val classArmourIds = remember(selectedClassId) { vm.getSuggestedArmourIdsForClass(selectedClassId) }
     val classSpellIds = remember(selectedClassId) { vm.getSuggestedSpellIdsForClass(selectedClassId) }
     val classProficiencies = remember(selectedClassId) { vm.getSuggestedProficienciesForClass(selectedClassId) }
+    val proficiencyChoiceCount = remember(selectedClassId) {
+        vm.getProficiencyChoiceCount(selectedClassId)
+    }
+    val canStartWithShield = remember(selectedClassId) {
+        vm.classCanStartWithShield(selectedClassId)
+    }
+
+    LaunchedEffect(selectedClassId) {
+        val selectedClass = classes.firstOrNull { it.id == selectedClassId }
+        selectedProficiencyIds.clear()
+        selectedSpellIds.clear()
+        selectedWeaponId = selectedClass?.defaultWeaponId
+        selectedArmourId = selectedClass?.defaultArmourId
+        hasShield = selectedClass?.startsWithShield == true
+    }
 
     val filteredWeapons = remember(classWeaponIds, weapons) {
         weapons.filter { it.id in classWeaponIds }
@@ -180,7 +196,7 @@ fun ScreenFullSetup(
                         ChoiceCard(
                             title = clazz.name,
                             subtitle = "Hit Die: d${clazz.hitDie}",
-                            summary = clazz.primaryStats.toString(),
+                            summary = clazz.description,
                             isSelected = clazz.id == selectedClassId,
                             onClick = { selectedClassId = clazz.id }
                         )
@@ -195,7 +211,7 @@ fun ScreenFullSetup(
                     races.forEach { race ->
                         ChoiceCard(
                             title = race.name,
-                            subtitle = "Race Option",
+                            subtitle = "${race.size} • Speed ${race.speed} ft.",
                             summary = race.description,
                             isSelected = race.id == selectedRaceId,
                             onClick = { selectedRaceId = race.id }
@@ -206,6 +222,11 @@ fun ScreenFullSetup(
 
                 FullSetupStep.STATS -> {
                     Text("Step 3: Allocate Stats", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Racial ability bonuses are applied automatically in the review.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Spacer(Modifier.height(8.dp))
 
                     StatRow("Strength", strength, { if (strength > 8) strength-- }, { if (strength < 18) strength++ })
@@ -219,6 +240,11 @@ fun ScreenFullSetup(
                 FullSetupStep.PROFICIENCIES -> {
                     Text("Step 4: Choose Proficiencies", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Choose up to $proficiencyChoiceCount.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(Modifier.height(8.dp))
 
                     classProficiencies.forEach { prof ->
                         ToggleLine(
@@ -227,7 +253,7 @@ fun ScreenFullSetup(
                             onClick = {
                                 if (selectedProficiencyIds.contains(prof)) {
                                     selectedProficiencyIds.remove(prof)
-                                } else if (selectedProficiencyIds.size < 2) {
+                                } else if (selectedProficiencyIds.size < proficiencyChoiceCount) {
                                     selectedProficiencyIds.add(prof)
                                 }
                             }
@@ -269,11 +295,15 @@ fun ScreenFullSetup(
 
                     Spacer(Modifier.height(12.dp))
 
-                    ToggleLine(
-                        label = "Shield",
-                        selected = hasShield,
-                        onClick = { hasShield = !hasShield }
-                    )
+                    if (canStartWithShield) {
+                        ToggleLine(
+                            label = "Shield",
+                            selected = hasShield,
+                            onClick = { hasShield = !hasShield }
+                        )
+                    } else {
+                        Text("This class does not start proficient with a shield.")
+                    }
                 }
 
                 FullSetupStep.SPELLS -> {

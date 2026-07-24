@@ -11,6 +11,8 @@ data class InventoryItemModel(
     val attackBonus: Int = 0,
     val damageDice: String = "",
     val armourBonus: Int = 0,
+    val baseArmourClass: Int? = null,
+    val maxDexBonus: Int? = null,
     val shieldBonus: Int = 0,
     val movementPenalty: Int = 0,
     val spellcastingBlocked: Boolean = false

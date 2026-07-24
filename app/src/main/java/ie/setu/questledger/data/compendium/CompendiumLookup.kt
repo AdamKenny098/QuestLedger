@@ -20,11 +20,11 @@ object CompendiumLookup {
     }
 
     fun raceDisplayName(value: String): String {
-        return findRace(value)?.name ?:value.ifBlank { "Uknown Race" }
+        return findRace(value)?.name ?: value.ifBlank { "Unknown Race" }
     }
 
     fun classDisplayName(value: String): String {
-        return findClass(value)?.name ?:value.ifBlank { "Uknown Class" }
+        return findClass(value)?.name ?: value.ifBlank { "Unknown Class" }
     }
 
     fun abilityLabel(ability: AbilityType): String{
@@ -48,5 +48,14 @@ object CompendiumLookup {
 
         return statBonuses.entries.joinToString (", " )
         { entry -> "${abilityLabel(entry.key)} +${entry.value}"}
+    }
+
+    fun formatStatBonuses(race: RaceDefinition): String {
+        val fixed = formatStatBonuses(race.statBonuses)
+        val flexible = race.flexibleStatBonuses.joinToString(", ") { "+$it to another ability" }
+        return listOf(fixed, flexible)
+            .filter { it.isNotBlank() && it != "No bonuses" }
+            .joinToString(", ")
+            .ifBlank { "No bonuses" }
     }
 }

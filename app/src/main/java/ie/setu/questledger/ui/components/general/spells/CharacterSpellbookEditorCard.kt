@@ -24,16 +24,9 @@ fun CharacterSpellbookEditorCard(
     onTogglePreparedSpell: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val tinySpellIds = listOf(
-        "fire_bolt",
-        "magic_missile",
-        "shield",
-        "sacred_flame",
-        "cure_wounds",
-        "bless"
-    )
-
-    val availableSpells = tinySpellIds.mapNotNull { compendiumService.getSpellById(it) }
+    val availableSpells = compendiumService.getSpells()
+        .filter { character.characterClass in it.classIds }
+        .sortedWith(compareBy({ it.level }, { it.name }))
 
     Surface(
         modifier = modifier.fillMaxWidth(),
