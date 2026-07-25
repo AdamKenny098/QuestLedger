@@ -35,7 +35,9 @@ class PremadeCharactersViewModel @Inject constructor(
             name = if (customName.isBlank()) template.defaultName else customName.trim(),
             raceId = template.raceId,
             classId = template.classId,
-            level = template.level
+            level = template.level,
+            backgroundId = template.backgroundId,
+            raceVariantId = template.raceVariantId
         )
 
         return runCatching { quickSetupEngine.build(config) }.getOrNull()
@@ -58,7 +60,9 @@ class PremadeCharactersViewModel @Inject constructor(
                     name = if (customName.isBlank()) template.defaultName else customName.trim(),
                     raceId = template.raceId,
                     classId = template.classId,
-                    level = template.level
+                    level = template.level,
+                    backgroundId = template.backgroundId,
+                    raceVariantId = template.raceVariantId
                 )
 
                 val result = quickSetupEngine.build(config)

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.compendium.ClassDefinition
+import ie.setu.questledger.data.compendium.BackgroundDefinition
 import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.firestore.FirestoreService
@@ -29,10 +30,20 @@ class QuickSetupViewModel @Inject constructor(
 
     fun getRaces(): List<RaceDefinition> = compendiumService.getRaces()
 
+    fun getRaceVariantsForRace(raceId: String) =
+        compendiumService.getRaceVariantsForRace(raceId)
+
     fun getClasses(): List<ClassDefinition> = compendiumService.getClasses()
 
+    fun getBackgrounds(): List<BackgroundDefinition> = compendiumService.getBackgrounds()
+
     fun buildPreview(config: QuickSetupConfig): QuickSetupResult? {
-        if (config.name.isBlank() || config.raceId.isBlank() || config.classId.isBlank()) {
+        if (
+            config.name.isBlank() ||
+            config.raceId.isBlank() ||
+            config.classId.isBlank() ||
+            config.backgroundId.isBlank()
+        ) {
             return null
         }
 

@@ -8,7 +8,9 @@ package ie.setu.questledger.data.compendium
  */
 object SeedCompendiumData {
     val races = SeedRaceData.races
+    val raceVariants = SeedRaceVariantData.variants
     val classes = SeedClassData.classes
+    val backgrounds = SeedBackgroundData.backgrounds
     val weapons = SeedEquipmentData.weapons
     val armour = SeedEquipmentData.armour
     val spells = SeedSpellData.spells

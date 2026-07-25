@@ -13,7 +13,8 @@ object SeedPremadeTemplates {
             defaultName = "Garrick",
             raceId = "human",
             classId = "fighter",
-            level = 1
+            level = 1,
+            backgroundId = "soldier"
         ),
         PremadeCharacterTemplate(
             id = "elf_wizard",
@@ -23,7 +24,9 @@ object SeedPremadeTemplates {
             defaultName = "Aeris",
             raceId = "elf",
             classId = "wizard",
-            level = 1
+            level = 1,
+            backgroundId = "sage",
+            raceVariantId = "high_elf"
         ),
         PremadeCharacterTemplate(
             id = "dwarf_cleric",
@@ -33,7 +36,9 @@ object SeedPremadeTemplates {
             defaultName = "Brom",
             raceId = "dwarf",
             classId = "cleric",
-            level = 1
+            level = 1,
+            backgroundId = "acolyte",
+            raceVariantId = "hill_dwarf"
         ),
         PremadeCharacterTemplate(
             id = "halforc_rogue",
@@ -43,7 +48,8 @@ object SeedPremadeTemplates {
             defaultName = "Krag",
             raceId = "halforc",
             classId = "rogue",
-            level = 1
+            level = 1,
+            backgroundId = "criminal"
         )
     )
 }

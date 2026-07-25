@@ -8,10 +8,15 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.compendium.ClassDefinition
+import ie.setu.questledger.data.compendium.BackgroundDefinition
 import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.compendium.RaceDefinition
+import ie.setu.questledger.data.compendium.AbilityType
+import ie.setu.questledger.data.compendium.SeedRaceVariantData
 import ie.setu.questledger.data.firestore.FirestoreService
 import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.rules.CharacterBackgroundRules
+import ie.setu.questledger.data.rules.CharacterRaceRules
 import ie.setu.questledger.data.rules.InventoryEngine
 import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.models.characters.CharacterModel
@@ -54,7 +59,72 @@ class CharacterDetailsViewModel @Inject constructor(
 
     fun getRaces(): List<RaceDefinition> = compendiumService.getRaces()
 
+    fun getRaceVariantsForRace(raceId: String) =
+        compendiumService.getRaceVariantsForRace(raceId)
+
     fun getClasses(): List<ClassDefinition> = compendiumService.getClasses()
+
+    fun getBackgrounds(): List<BackgroundDefinition> = compendiumService.getBackgrounds()
+
+    fun getFlexibleAbilityChoices(
+        raceId: String,
+        raceVariantId: String
+    ): List<AbilityType> {
+        val race = compendiumService.getRaceById(raceId) ?: return emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return CharacterRaceRules.availableFlexibleAbilities(race, variant)
+    }
+
+    fun getFlexibleAbilityChoiceCount(raceId: String): Int {
+        return compendiumService.getRaceById(raceId)?.flexibleStatBonuses?.size ?: 0
+    }
+
+    fun getRacialSkillOptions(raceId: String, raceVariantId: String): List<String> {
+        val race = compendiumService.getRaceById(raceId) ?: return emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return (race.skillChoiceOptions + variant?.skillChoiceOptions.orEmpty())
+            .distinct()
+            .ifEmpty { SeedRaceVariantData.allSkills }
+    }
+
+    fun getRacialSkillChoiceCount(raceId: String, raceVariantId: String): Int {
+        val race = compendiumService.getRaceById(raceId) ?: return 0
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return race.skillChoiceCount + (variant?.skillChoiceCount ?: 0)
+    }
+
+    fun getRacialLanguageChoiceCount(raceId: String, raceVariantId: String): Int {
+        val race = compendiumService.getRaceById(raceId) ?: return 0
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return race.languageChoiceCount + (variant?.languageChoiceCount ?: 0)
+    }
+
+    fun getRacialLanguageOptions(
+        raceId: String,
+        raceVariantId: String,
+        backgroundId: String
+    ): List<String> {
+        val race = compendiumService.getRaceById(raceId) ?: return emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        val background = compendiumService.getBackgroundById(backgroundId)
+        val blocked = (
+            race.languages +
+                variant?.languages.orEmpty() +
+                background?.suggestedLanguages.orEmpty()
+            ).toSet()
+        return SeedRaceVariantData.languageOptions.filterNot { it in blocked }
+    }
+
+    fun getRacialCantripOptions(raceVariantId: String) =
+        CharacterRaceRules.availableRacialCantrips(
+            compendiumService.getRaceVariantById(raceVariantId),
+            compendiumService.getSpells()
+        )
 
     fun equipItem(itemId: String) {
         val current = character.value
@@ -185,6 +255,8 @@ class CharacterDetailsViewModel @Inject constructor(
         name: String,
         characterClass: String,
         race: String,
+        raceVariant: String,
+        background: String,
         level: Int,
         notes: String,
         strength: Int,
@@ -193,6 +265,10 @@ class CharacterDetailsViewModel @Inject constructor(
         intelligence: Int,
         wisdom: Int,
         charisma: Int,
+        selectedRacialAbilityBonusIds: List<String>,
+        selectedRacialSkillIds: List<String>,
+        selectedRacialLanguageIds: List<String>,
+        selectedRacialSpellId: String,
         imageUri: Uri?,
         onSuccess: () -> Unit
     ) {
@@ -208,24 +284,71 @@ class CharacterDetailsViewModel @Inject constructor(
                         character.value.imageUri
                     }
 
-                val baseCharacter = character.value.copy(
-                    email = authService.email,
-                    name = name,
+                val currentCharacter = character.value
+                val oldBackground =
+                    compendiumService.getBackgroundById(currentCharacter.background)
+                val newBackground = requireNotNull(
+                    compendiumService.getBackgroundById(background)
+                ) {
+                    "Unknown background: $background"
+                }
+                val oldRace = compendiumService.getRaceById(currentCharacter.race)
+                val newRace = requireNotNull(compendiumService.getRaceById(race)) {
+                    "Unknown race: $race"
+                }
+                val oldRaceVariant =
+                    compendiumService.getRaceVariantById(currentCharacter.raceVariant)
+                val newClass = requireNotNull(
+                    compendiumService.getClassById(characterClass)
+                ) {
+                    "Unknown class: $characterClass"
+                }
+                val characterWithFormValues = currentCharacter.copy(
                     characterClass = characterClass,
-                    race = race,
                     level = level,
-                    notes = notes,
-                    imageUri = uploadedImageUri,
                     strength = strength,
                     dexterity = dexterity,
                     constitution = constitution,
                     intelligence = intelligence,
                     wisdom = wisdom,
-                    charisma = charisma,
-                    inventory = character.value.inventory,
-                    skillProficiencyIds = character.value.skillProficiencyIds,
-                    knownSpellIds = character.value.knownSpellIds,
-                    preparedSpellIds = character.value.preparedSpellIds
+                    charisma = charisma
+                )
+                val characterWithRace = CharacterRaceRules.applySelection(
+                    character = characterWithFormValues,
+                    oldRace = oldRace,
+                    oldVariant = oldRaceVariant,
+                    newRace = newRace,
+                    newVariantsForRace = compendiumService.getRaceVariantsForRace(race),
+                    characterClass = newClass,
+                    background = newBackground,
+                    level = level,
+                    spells = compendiumService.getSpells(),
+                    requestedVariantId = raceVariant,
+                    selectedFlexibleAbilityIds = selectedRacialAbilityBonusIds,
+                    selectedRacialSkillIds = selectedRacialSkillIds,
+                    selectedRacialLanguageIds = selectedRacialLanguageIds,
+                    selectedRacialSpellId = selectedRacialSpellId
+                )
+                val characterWithBackground = CharacterBackgroundRules.applySelection(
+                    character = characterWithRace,
+                    newRace = newRace,
+                    newBackground = newBackground,
+                    oldRace = newRace,
+                    oldBackground = oldBackground
+                )
+
+                val baseCharacter = characterWithBackground.copy(
+                    email = authService.email,
+                    name = name,
+                    characterClass = characterClass,
+                    race = race,
+                    raceVariant = characterWithBackground.raceVariant,
+                    background = background,
+                    level = level,
+                    notes = notes,
+                    imageUri = uploadedImageUri,
+                    knownSpellIds = characterWithBackground.knownSpellIds,
+                    preparedSpellIds = characterWithBackground.preparedSpellIds
                 )
 
                 val derived = CharacterStatEngine.build(baseCharacter)

@@ -25,6 +25,8 @@ import coil.compose.AsyncImage
 import ie.setu.questledger.data.compendium.CompendiumLookup
 import ie.setu.questledger.data.rules.CharacterStatEngine
 import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentCard
+import ie.setu.questledger.ui.components.general.backgrounds.CharacterBackgroundCard
+import ie.setu.questledger.ui.components.general.ancestry.CharacterAncestryCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryCard
 import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
 
@@ -72,7 +74,7 @@ fun ScreenCharacterDetails(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "${CompendiumLookup.raceDisplayName(c.race)} ${CompendiumLookup.classDisplayName(c.characterClass)} • Level ${c.level}",
+                text = "${CompendiumLookup.characterRaceDisplayName(c.race, c.raceVariant)} ${CompendiumLookup.classDisplayName(c.characterClass)} • Level ${c.level}",
                 style = MaterialTheme.typography.bodyLarge
             )
 
@@ -113,6 +115,14 @@ fun ScreenCharacterDetails(
             Spacer(Modifier.height(16.dp))
 
             CharacterDerivedStatsCard(character = c)
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterAncestryCard(character = c)
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterBackgroundCard(character = c)
 
             Spacer(Modifier.height(12.dp))
 

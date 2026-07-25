@@ -31,11 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import ie.setu.questledger.data.compendium.CompendiumLookup
 import ie.setu.questledger.models.FullSetupConfig
+import ie.setu.questledger.ui.components.general.CompendiumDropdown
+import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
 
 private enum class FullSetupStep {
-    CLASS, RACE, STATS, PROFICIENCIES, GEAR, SPELLS, REVIEW
+    CLASS, RACE, BACKGROUND, STATS, PROFICIENCIES, GEAR, SPELLS, REVIEW
 }
 
 @Composable
@@ -46,6 +49,7 @@ fun ScreenFullSetup(
 ) {
     val classes = remember { vm.getClasses() }
     val races = remember { vm.getRaces() }
+    val backgrounds = remember { vm.getBackgrounds() }
     val weapons = remember { vm.getWeapons() }
     val armours = remember { vm.getArmour() }
     val spells = remember { vm.getSpells() }
@@ -55,6 +59,34 @@ fun ScreenFullSetup(
     var characterName by remember { mutableStateOf("") }
     var selectedClassId by remember { mutableStateOf(classes.firstOrNull()?.id.orEmpty()) }
     var selectedRaceId by remember { mutableStateOf(races.firstOrNull()?.id.orEmpty()) }
+    var selectedRaceVariantId by remember {
+        mutableStateOf(
+            vm.getRaceVariantsForRace(races.firstOrNull()?.id.orEmpty())
+                .firstOrNull()
+                ?.id
+                .orEmpty()
+        )
+    }
+    var selectedBackgroundId by remember {
+        mutableStateOf(backgrounds.firstOrNull()?.id.orEmpty())
+    }
+
+    val initialBackground = backgrounds.firstOrNull()
+    var selectedPersonalityTrait1 by remember {
+        mutableStateOf(initialBackground?.personalityTraits?.getOrNull(0).orEmpty())
+    }
+    var selectedPersonalityTrait2 by remember {
+        mutableStateOf(initialBackground?.personalityTraits?.getOrNull(1).orEmpty())
+    }
+    var selectedIdeal by remember {
+        mutableStateOf(initialBackground?.ideals?.firstOrNull().orEmpty())
+    }
+    var selectedBond by remember {
+        mutableStateOf(initialBackground?.bonds?.firstOrNull().orEmpty())
+    }
+    var selectedFlaw by remember {
+        mutableStateOf(initialBackground?.flaws?.firstOrNull().orEmpty())
+    }
 
     var strength by remember { mutableIntStateOf(10) }
     var dexterity by remember { mutableIntStateOf(10) }
@@ -64,6 +96,10 @@ fun ScreenFullSetup(
     var charisma by remember { mutableIntStateOf(10) }
 
     val selectedProficiencyIds = remember { mutableStateListOf<String>() }
+    val selectedFlexibleAbilityIds = remember { mutableStateListOf<String>() }
+    val selectedRacialSkillIds = remember { mutableStateListOf<String>() }
+    val selectedRacialLanguageIds = remember { mutableStateListOf<String>() }
+    var selectedRacialSpellId by remember { mutableStateOf("") }
     var selectedWeaponId by remember { mutableStateOf<String?>(null) }
     var selectedArmourId by remember { mutableStateOf<String?>(null) }
     var hasShield by remember { mutableStateOf(false) }
@@ -71,10 +107,73 @@ fun ScreenFullSetup(
 
     var localError by remember { mutableStateOf<String?>(null) }
 
+    val selectedBackground = remember(selectedBackgroundId) {
+        backgrounds.firstOrNull { it.id == selectedBackgroundId }
+    }
+    val selectedRace = remember(selectedRaceId) {
+        races.firstOrNull { it.id == selectedRaceId }
+    }
+    val raceVariants = remember(selectedRaceId) {
+        vm.getRaceVariantsForRace(selectedRaceId)
+    }
+    val selectedRaceVariant = remember(selectedRaceId, selectedRaceVariantId) {
+        raceVariants.firstOrNull { it.id == selectedRaceVariantId }
+    }
+    val flexibleAbilityChoices = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getFlexibleAbilityChoices(selectedRaceId, selectedRaceVariantId)
+    }
+    val flexibleAbilityChoiceCount = remember(selectedRaceId) {
+        vm.getFlexibleAbilityChoiceCount(selectedRaceId)
+    }
+    val racialSkillChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getRacialSkillChoiceCount(selectedRaceId, selectedRaceVariantId)
+    }
+    val racialSkillOptions = remember(
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedBackgroundId
+    ) {
+        vm.getRacialSkillOptions(selectedRaceId, selectedRaceVariantId)
+            .filterNot { it in selectedBackground?.skillProficiencyIds.orEmpty() }
+    }
+    val fixedRacialSkillIds = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getFixedRacialSkillIds(selectedRaceId, selectedRaceVariantId)
+    }
+    val racialLanguageChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getRacialLanguageChoiceCount(selectedRaceId, selectedRaceVariantId)
+    }
+    val racialLanguageOptions = remember(
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedBackgroundId
+    ) {
+        vm.getRacialLanguageOptions(
+            selectedRaceId,
+            selectedRaceVariantId,
+            selectedBackgroundId
+        )
+    }
+    val racialCantripOptions = remember(selectedRaceVariantId) {
+        vm.getRacialCantripOptions(selectedRaceVariantId)
+    }
     val classWeaponIds = remember(selectedClassId) { vm.getSuggestedWeaponIdsForClass(selectedClassId) }
     val classArmourIds = remember(selectedClassId) { vm.getSuggestedArmourIdsForClass(selectedClassId) }
     val classSpellIds = remember(selectedClassId) { vm.getSuggestedSpellIdsForClass(selectedClassId) }
-    val classProficiencies = remember(selectedClassId) { vm.getSuggestedProficienciesForClass(selectedClassId) }
+    val classProficiencies = remember(
+        selectedClassId,
+        selectedBackgroundId,
+        selectedRaceId,
+        selectedRaceVariantId,
+        fixedRacialSkillIds,
+        selectedRacialSkillIds.toList()
+    ) {
+        vm.getSuggestedProficienciesForClass(selectedClassId)
+            .filterNot {
+                it in selectedBackground?.skillProficiencyIds.orEmpty() ||
+                    it in fixedRacialSkillIds ||
+                    it in selectedRacialSkillIds
+            }
+    }
     val proficiencyChoiceCount = remember(selectedClassId) {
         vm.getProficiencyChoiceCount(selectedClassId)
     }
@@ -89,6 +188,69 @@ fun ScreenFullSetup(
         selectedWeaponId = selectedClass?.defaultWeaponId
         selectedArmourId = selectedClass?.defaultArmourId
         hasShield = selectedClass?.startsWithShield == true
+    }
+
+    LaunchedEffect(selectedBackgroundId) {
+        selectedPersonalityTrait1 =
+            selectedBackground?.personalityTraits?.getOrNull(0).orEmpty()
+        selectedPersonalityTrait2 =
+            selectedBackground?.personalityTraits?.getOrNull(1).orEmpty()
+        selectedIdeal = selectedBackground?.ideals?.firstOrNull().orEmpty()
+        selectedBond = selectedBackground?.bonds?.firstOrNull().orEmpty()
+        selectedFlaw = selectedBackground?.flaws?.firstOrNull().orEmpty()
+        selectedProficiencyIds.removeAll(
+            selectedBackground?.skillProficiencyIds.orEmpty().toSet()
+        )
+    }
+
+    LaunchedEffect(
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedClassId,
+        selectedBackgroundId
+    ) {
+        val validVariant = raceVariants.firstOrNull { it.id == selectedRaceVariantId }
+        if (raceVariants.isNotEmpty() && validVariant == null) {
+            selectedRaceVariantId = raceVariants.first().id
+            return@LaunchedEffect
+        }
+        if (raceVariants.isEmpty() && selectedRaceVariantId.isNotBlank()) {
+            selectedRaceVariantId = ""
+            return@LaunchedEffect
+        }
+
+        val classPriority = classes.firstOrNull { it.id == selectedClassId }
+            ?.quickBuildAbilityPriority
+            .orEmpty()
+            .map { it.name }
+        selectedFlexibleAbilityIds.clear()
+        selectedFlexibleAbilityIds.addAll(
+            (classPriority + flexibleAbilityChoices.map { it.name })
+                .distinct()
+                .filter { id -> flexibleAbilityChoices.any { it.name == id } }
+                .take(flexibleAbilityChoiceCount)
+        )
+
+        selectedRacialSkillIds.clear()
+        selectedRacialSkillIds.addAll(
+            (
+                vm.getSuggestedProficienciesForClass(selectedClassId) +
+                    racialSkillOptions
+                )
+                .distinct()
+                .filter { it in racialSkillOptions && it !in fixedRacialSkillIds }
+                .take(racialSkillChoiceCount)
+        )
+
+        selectedRacialLanguageIds.clear()
+        selectedRacialLanguageIds.addAll(
+            racialLanguageOptions.take(racialLanguageChoiceCount)
+        )
+        selectedRacialSpellId = racialCantripOptions.firstOrNull()?.id.orEmpty()
+
+        selectedProficiencyIds.removeAll(
+            (fixedRacialSkillIds + selectedRacialSkillIds).toSet()
+        )
     }
 
     val filteredWeapons = remember(classWeaponIds, weapons) {
@@ -107,6 +269,8 @@ fun ScreenFullSetup(
         characterName,
         selectedClassId,
         selectedRaceId,
+        selectedRaceVariantId,
+        selectedBackgroundId,
         strength,
         dexterity,
         constitution,
@@ -114,10 +278,19 @@ fun ScreenFullSetup(
         wisdom,
         charisma,
         selectedProficiencyIds.toList(),
+        selectedFlexibleAbilityIds.toList(),
+        selectedRacialSkillIds.toList(),
+        selectedRacialLanguageIds.toList(),
+        selectedRacialSpellId,
         selectedWeaponId,
         selectedArmourId,
         hasShield,
-        selectedSpellIds.toList()
+        selectedSpellIds.toList(),
+        selectedPersonalityTrait1,
+        selectedPersonalityTrait2,
+        selectedIdeal,
+        selectedBond,
+        selectedFlaw
     ) {
         FullSetupConfig(
             name = characterName.trim(),
@@ -134,7 +307,20 @@ fun ScreenFullSetup(
             starterWeaponId = selectedWeaponId,
             starterArmourId = selectedArmourId,
             hasShield = hasShield,
-            starterSpellIds = selectedSpellIds.toList()
+            starterSpellIds = selectedSpellIds.toList(),
+            backgroundId = selectedBackgroundId,
+            raceVariantId = selectedRaceVariantId,
+            selectedFlexibleAbilityIds = selectedFlexibleAbilityIds.toList(),
+            selectedRacialSkillIds = selectedRacialSkillIds.toList(),
+            selectedRacialLanguageIds = selectedRacialLanguageIds.toList(),
+            selectedRacialSpellId = selectedRacialSpellId,
+            personalityTraits = listOf(
+                selectedPersonalityTrait1,
+                selectedPersonalityTrait2
+            ),
+            ideal = selectedIdeal,
+            bond = selectedBond,
+            flaw = selectedFlaw
         )
     }
 
@@ -142,7 +328,8 @@ fun ScreenFullSetup(
         if (
             config.name.isNotBlank() &&
             config.classId.isNotBlank() &&
-            config.raceId.isNotBlank()
+            config.raceId.isNotBlank() &&
+            config.backgroundId.isNotBlank()
         ) {
             vm.buildPreview(config)
         } else {
@@ -214,14 +401,293 @@ fun ScreenFullSetup(
                             subtitle = "${race.size} • Speed ${race.speed} ft.",
                             summary = race.description,
                             isSelected = race.id == selectedRaceId,
-                            onClick = { selectedRaceId = race.id }
+                            onClick = {
+                                selectedRaceId = race.id
+                                selectedRaceVariantId = vm.getRaceVariantsForRace(race.id)
+                                    .firstOrNull()
+                                    ?.id
+                                    .orEmpty()
+                            }
                         )
                         Spacer(Modifier.height(10.dp))
+                    }
+
+                    selectedRace?.let { race ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            if (race.id == "dragonborn") {
+                                "Choose Draconic Ancestry"
+                            } else if (raceVariants.isNotEmpty()) {
+                                "Choose Subrace"
+                            } else {
+                                "Ancestry Details"
+                            },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        raceVariants.forEach { variant ->
+                            ChoiceCard(
+                                title = variant.name,
+                                subtitle = CompendiumLookup.formatStatBonuses(race, variant),
+                                summary = variant.description,
+                                isSelected = variant.id == selectedRaceVariantId,
+                                onClick = { selectedRaceVariantId = variant.id }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
+
+                        if (raceVariants.isEmpty()) {
+                            Text(
+                                "This race has no required subrace choice.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        selectedRaceVariant?.let { variant ->
+                            Text(
+                                "Traits: ${
+                                    (race.passiveTraits + variant.passiveTraits)
+                                        .distinct()
+                                        .joinToString()
+                                }",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                "Speed: ${variant.speedOverride ?: race.speed} ft.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        if (flexibleAbilityChoiceCount > 0) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Flexible Ability Bonuses",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                "Choose $flexibleAbilityChoiceCount different abilities.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            repeat(flexibleAbilityChoiceCount) { index ->
+                                val selectedId =
+                                    selectedFlexibleAbilityIds.getOrNull(index).orEmpty()
+                                val blocked = selectedFlexibleAbilityIds
+                                    .filterIndexed { otherIndex, _ -> otherIndex != index }
+                                    .toSet()
+                                CompendiumDropdown(
+                                    label = "Ability Bonus ${index + 1}",
+                                    options = flexibleAbilityChoices
+                                        .filterNot { it.name in blocked }
+                                        .map {
+                                            CompendiumOption(
+                                                it.name,
+                                                CompendiumLookup.abilityLabel(it)
+                                            )
+                                        },
+                                    selectedId = selectedId,
+                                    onSelected = { abilityId ->
+                                        if (index < selectedFlexibleAbilityIds.size) {
+                                            selectedFlexibleAbilityIds[index] = abilityId
+                                        } else {
+                                            selectedFlexibleAbilityIds.add(abilityId)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        }
+
+                        if (racialSkillChoiceCount > 0) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Racial Skill Choices",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                "Choose $racialSkillChoiceCount different skills.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            racialSkillOptions.forEach { skill ->
+                                ToggleLine(
+                                    label = skill,
+                                    selected = skill in selectedRacialSkillIds,
+                                    onClick = {
+                                        if (skill in selectedRacialSkillIds) {
+                                            selectedRacialSkillIds.remove(skill)
+                                        } else if (
+                                            selectedRacialSkillIds.size <
+                                            racialSkillChoiceCount
+                                        ) {
+                                            selectedRacialSkillIds.add(skill)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+
+                        if (racialLanguageChoiceCount > 0) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Extra Language",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            repeat(racialLanguageChoiceCount) { index ->
+                                val selectedId =
+                                    selectedRacialLanguageIds.getOrNull(index).orEmpty()
+                                val blocked = selectedRacialLanguageIds
+                                    .filterIndexed { otherIndex, _ -> otherIndex != index }
+                                    .toSet()
+                                CompendiumDropdown(
+                                    label = "Language ${index + 1}",
+                                    options = racialLanguageOptions
+                                        .filterNot { it in blocked }
+                                        .map { CompendiumOption(it, it) },
+                                    selectedId = selectedId,
+                                    onSelected = { language ->
+                                        if (index < selectedRacialLanguageIds.size) {
+                                            selectedRacialLanguageIds[index] = language
+                                        } else {
+                                            selectedRacialLanguageIds.add(language)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        }
+
+                        if (racialCantripOptions.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Racial Cantrip",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            CompendiumDropdown(
+                                label = "Cantrip",
+                                options = racialCantripOptions.map {
+                                    CompendiumOption(it.id, it.name)
+                                },
+                                selectedId = selectedRacialSpellId,
+                                onSelected = { selectedRacialSpellId = it },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+
+                FullSetupStep.BACKGROUND -> {
+                    Text("Step 3: Choose Background", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+
+                    backgrounds.forEach { background ->
+                        ChoiceCard(
+                            title = background.name,
+                            subtitle = "Skills: ${background.skillProficiencyIds.joinToString()}",
+                            summary = background.description,
+                            isSelected = background.id == selectedBackgroundId,
+                            onClick = { selectedBackgroundId = background.id }
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
+
+                    selectedBackground?.let { background ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Feature: ${background.featureName}",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            background.featureDescription,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Tools: ${background.toolProficiencies.joinToString().ifBlank { "None" }}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            "Languages: ${
+                                background.suggestedLanguages.joinToString().ifBlank { "None" }
+                            }",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            "Starting Gold: ${background.startingGoldGp} gp",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+                        Text("Roleplay Prompts", style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(8.dp))
+
+                        CompendiumDropdown(
+                            label = "Personality Trait 1",
+                            options = background.personalityTraits.map {
+                                CompendiumOption(it, it)
+                            },
+                            selectedId = selectedPersonalityTrait1,
+                            onSelected = { selected ->
+                                selectedPersonalityTrait1 = selected
+                                if (selectedPersonalityTrait2 == selected) {
+                                    selectedPersonalityTrait2 =
+                                        background.personalityTraits.firstOrNull { it != selected }
+                                            .orEmpty()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        CompendiumDropdown(
+                            label = "Personality Trait 2",
+                            options = background.personalityTraits
+                                .filterNot { it == selectedPersonalityTrait1 }
+                                .map { CompendiumOption(it, it) },
+                            selectedId = selectedPersonalityTrait2,
+                            onSelected = { selectedPersonalityTrait2 = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        CompendiumDropdown(
+                            label = "Ideal",
+                            options = background.ideals.map { CompendiumOption(it, it) },
+                            selectedId = selectedIdeal,
+                            onSelected = { selectedIdeal = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        CompendiumDropdown(
+                            label = "Bond",
+                            options = background.bonds.map { CompendiumOption(it, it) },
+                            selectedId = selectedBond,
+                            onSelected = { selectedBond = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        CompendiumDropdown(
+                            label = "Flaw",
+                            options = background.flaws.map { CompendiumOption(it, it) },
+                            selectedId = selectedFlaw,
+                            onSelected = { selectedFlaw = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 
                 FullSetupStep.STATS -> {
-                    Text("Step 3: Allocate Stats", style = MaterialTheme.typography.titleMedium)
+                    Text("Step 4: Allocate Stats", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Racial ability bonuses are applied automatically in the review.",
@@ -238,10 +704,10 @@ fun ScreenFullSetup(
                 }
 
                 FullSetupStep.PROFICIENCIES -> {
-                    Text("Step 4: Choose Proficiencies", style = MaterialTheme.typography.titleMedium)
+                    Text("Step 5: Choose Class Proficiencies", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Choose up to $proficiencyChoiceCount.",
+                        "Choose up to $proficiencyChoiceCount. Background skills are added automatically.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(Modifier.height(8.dp))
@@ -262,7 +728,7 @@ fun ScreenFullSetup(
                 }
 
                 FullSetupStep.GEAR -> {
-                    Text("Step 5: Choose Gear", style = MaterialTheme.typography.titleMedium)
+                    Text("Step 6: Choose Gear", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
 
                     Text("Weapon", style = MaterialTheme.typography.titleSmall)
@@ -307,7 +773,7 @@ fun ScreenFullSetup(
                 }
 
                 FullSetupStep.SPELLS -> {
-                    Text("Step 6: Choose Spells", style = MaterialTheme.typography.titleMedium)
+                    Text("Step 7: Choose Spells", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
 
                     if (!vm.classUsesSpells(selectedClassId)) {
@@ -330,7 +796,7 @@ fun ScreenFullSetup(
                 }
 
                 FullSetupStep.REVIEW -> {
-                    Text("Step 7: Review", style = MaterialTheme.typography.titleMedium)
+                    Text("Step 8: Review", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(10.dp))
 
                     preview?.let { result ->
@@ -378,7 +844,8 @@ fun ScreenFullSetup(
                             step = when (step) {
                                 FullSetupStep.CLASS -> FullSetupStep.CLASS
                                 FullSetupStep.RACE -> FullSetupStep.CLASS
-                                FullSetupStep.STATS -> FullSetupStep.RACE
+                                FullSetupStep.BACKGROUND -> FullSetupStep.RACE
+                                FullSetupStep.STATS -> FullSetupStep.BACKGROUND
                                 FullSetupStep.PROFICIENCIES -> FullSetupStep.STATS
                                 FullSetupStep.GEAR -> FullSetupStep.PROFICIENCIES
                                 FullSetupStep.SPELLS -> FullSetupStep.GEAR
@@ -405,8 +872,35 @@ fun ScreenFullSetup(
                                 }
 
                                 FullSetupStep.RACE -> {
-                                    if (selectedRaceId.isBlank()) localError = "Choose a race"
-                                    else {
+                                    when {
+                                        selectedRaceId.isBlank() ->
+                                            localError = "Choose a race"
+                                        raceVariants.isNotEmpty() &&
+                                            selectedRaceVariantId.isBlank() ->
+                                            localError = "Choose an ancestry"
+                                        selectedFlexibleAbilityIds.size !=
+                                            flexibleAbilityChoiceCount ->
+                                            localError = "Choose every flexible ability bonus"
+                                        selectedRacialSkillIds.size !=
+                                            racialSkillChoiceCount ->
+                                            localError = "Choose every racial skill"
+                                        selectedRacialLanguageIds.size !=
+                                            racialLanguageChoiceCount ->
+                                            localError = "Choose every racial language"
+                                        racialCantripOptions.isNotEmpty() &&
+                                            selectedRacialSpellId.isBlank() ->
+                                            localError = "Choose a racial cantrip"
+                                        else -> {
+                                            localError = null
+                                            step = FullSetupStep.BACKGROUND
+                                        }
+                                    }
+                                }
+
+                                FullSetupStep.BACKGROUND -> {
+                                    if (selectedBackgroundId.isBlank()) {
+                                        localError = "Choose a background"
+                                    } else {
                                         localError = null
                                         step = FullSetupStep.STATS
                                     }
@@ -449,6 +943,11 @@ fun ScreenFullSetup(
                                 characterName.isBlank() -> localError = "Enter a character name"
                                 selectedClassId.isBlank() -> localError = "Choose a class"
                                 selectedRaceId.isBlank() -> localError = "Choose a race"
+                                raceVariants.isNotEmpty() &&
+                                    selectedRaceVariantId.isBlank() ->
+                                    localError = "Choose an ancestry"
+                                selectedBackgroundId.isBlank() ->
+                                    localError = "Choose a background"
                                 else -> {
                                     localError = null
                                     vm.saveCharacter(config) {

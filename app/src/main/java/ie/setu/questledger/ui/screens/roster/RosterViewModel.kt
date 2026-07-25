@@ -43,8 +43,9 @@ class RosterViewModel @Inject constructor(
             val filtered =
                 if (term.isEmpty()) list
                 else list.filter { c ->
-                    c.name.lowercase().contains(term) ||
+                            c.name.lowercase().contains(term) ||
                             c.race.lowercase().contains(term) ||
+                            c.raceVariant.lowercase().contains(term) ||
                             c.characterClass.lowercase().contains(term)
                 }
 

@@ -44,6 +44,7 @@ fun ScreenCharacterEdit(
 
     val races = remember { vm.getRaces() }
     val classes = remember { vm.getClasses() }
+    val backgrounds = remember { vm.getBackgrounds() }
 
     var name by remember(c.id) { mutableStateOf(c.name) }
     var selectedClassId by remember(c.id) {
@@ -51,6 +52,36 @@ fun ScreenCharacterEdit(
     }
     var selectedRaceId by remember(c.id) {
         mutableStateOf(CompendiumLookup.findRace(c.race)?.id ?: c.race)
+    }
+    var selectedRaceVariantId by remember(c.id) {
+        mutableStateOf(
+            CompendiumLookup.findRaceVariant(c.raceVariant)?.id
+                ?: c.raceVariant
+        )
+    }
+    val selectedFlexibleAbilityIds = remember(c.id) {
+        mutableStateListOf<String>().apply {
+            addAll(c.selectedRacialAbilityBonusIds)
+        }
+    }
+    val selectedRacialSkillIds = remember(c.id) {
+        mutableStateListOf<String>().apply {
+            addAll(c.selectedRacialSkillIds)
+        }
+    }
+    val selectedRacialLanguageIds = remember(c.id) {
+        mutableStateListOf<String>().apply {
+            addAll(c.selectedRacialLanguageIds)
+        }
+    }
+    var selectedRacialSpellId by remember(c.id) {
+        mutableStateOf(c.selectedRacialSpellId)
+    }
+    var selectedBackgroundId by remember(c.id) {
+        mutableStateOf(
+            CompendiumLookup.findBackground(c.background)?.id
+                ?: c.background.ifBlank { backgrounds.firstOrNull()?.id.orEmpty() }
+        )
     }
     var levelText by remember(c.id) { mutableStateOf(c.level.toString()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -80,9 +111,121 @@ fun ScreenCharacterEdit(
     val selectedRace = remember(selectedRaceId) {
         races.firstOrNull { it.id == selectedRaceId }
     }
+    val raceVariants = remember(selectedRaceId) {
+        vm.getRaceVariantsForRace(selectedRaceId)
+    }
+    val selectedRaceVariant = remember(selectedRaceId, selectedRaceVariantId) {
+        raceVariants.firstOrNull { it.id == selectedRaceVariantId }
+    }
 
     val selectedClass = remember(selectedClassId) {
         classes.firstOrNull { it.id == selectedClassId }
+    }
+
+    val selectedBackground = remember(selectedBackgroundId) {
+        backgrounds.firstOrNull { it.id == selectedBackgroundId }
+    }
+    val flexibleAbilityChoices = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getFlexibleAbilityChoices(selectedRaceId, selectedRaceVariantId)
+    }
+    val flexibleAbilityChoiceCount = remember(selectedRaceId) {
+        vm.getFlexibleAbilityChoiceCount(selectedRaceId)
+    }
+    val racialSkillChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getRacialSkillChoiceCount(selectedRaceId, selectedRaceVariantId)
+    }
+    val racialSkillOptions = remember(
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedBackgroundId
+    ) {
+        vm.getRacialSkillOptions(selectedRaceId, selectedRaceVariantId)
+            .filterNot { it in selectedBackground?.skillProficiencyIds.orEmpty() }
+    }
+    val racialLanguageChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getRacialLanguageChoiceCount(selectedRaceId, selectedRaceVariantId)
+    }
+    val racialLanguageOptions = remember(
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedBackgroundId
+    ) {
+        vm.getRacialLanguageOptions(
+            selectedRaceId,
+            selectedRaceVariantId,
+            selectedBackgroundId
+        )
+    }
+    val racialCantripOptions = remember(selectedRaceVariantId) {
+        vm.getRacialCantripOptions(selectedRaceVariantId)
+    }
+
+    LaunchedEffect(
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedClassId,
+        selectedBackgroundId,
+        c.id
+    ) {
+        if (raceVariants.isNotEmpty() && selectedRaceVariant == null) {
+            selectedRaceVariantId = raceVariants.first().id
+            return@LaunchedEffect
+        }
+        if (raceVariants.isEmpty() && selectedRaceVariantId.isNotBlank()) {
+            selectedRaceVariantId = ""
+            return@LaunchedEffect
+        }
+
+        val abilityOptions = flexibleAbilityChoices.map { it.name }
+        if (
+            selectedFlexibleAbilityIds.size != flexibleAbilityChoiceCount ||
+            selectedFlexibleAbilityIds.any { it !in abilityOptions } ||
+            selectedFlexibleAbilityIds.distinct().size !=
+            selectedFlexibleAbilityIds.size
+        ) {
+            val classPriority = selectedClass?.quickBuildAbilityPriority
+                .orEmpty()
+                .map { it.name }
+            selectedFlexibleAbilityIds.clear()
+            selectedFlexibleAbilityIds.addAll(
+                (classPriority + abilityOptions)
+                    .distinct()
+                    .filter { it in abilityOptions }
+                    .take(flexibleAbilityChoiceCount)
+            )
+        }
+
+        if (
+            selectedRacialSkillIds.size != racialSkillChoiceCount ||
+            selectedRacialSkillIds.any { it !in racialSkillOptions } ||
+            selectedRacialSkillIds.distinct().size != selectedRacialSkillIds.size
+        ) {
+            selectedRacialSkillIds.clear()
+            selectedRacialSkillIds.addAll(
+                racialSkillOptions.take(racialSkillChoiceCount)
+            )
+        }
+
+        if (
+            selectedRacialLanguageIds.size != racialLanguageChoiceCount ||
+            selectedRacialLanguageIds.any { it !in racialLanguageOptions } ||
+            selectedRacialLanguageIds.distinct().size !=
+            selectedRacialLanguageIds.size
+        ) {
+            selectedRacialLanguageIds.clear()
+            selectedRacialLanguageIds.addAll(
+                racialLanguageOptions.take(racialLanguageChoiceCount)
+            )
+        }
+
+        if (
+            racialCantripOptions.isNotEmpty() &&
+            racialCantripOptions.none { it.id == selectedRacialSpellId }
+        ) {
+            selectedRacialSpellId = racialCantripOptions.first().id
+        } else if (racialCantripOptions.isEmpty()) {
+            selectedRacialSpellId = ""
+        }
     }
 
     val previewCharacter = CharacterModel(
@@ -91,6 +234,8 @@ fun ScreenCharacterEdit(
         name = name,
         characterClass = selectedClassId,
         race = selectedRaceId,
+        raceVariant = selectedRaceVariantId,
+        background = selectedBackgroundId,
         level = levelText.toIntOrNull() ?: 1,
         notes = text,
         imageUri = c.imageUri,
@@ -105,6 +250,30 @@ fun ScreenCharacterEdit(
         shieldBonus = vm.character.value.shieldBonus,
         inventory = vm.character.value.inventory,
         skillProficiencyIds = vm.character.value.skillProficiencyIds,
+        racialSkillProficiencyIds = selectedRacialSkillIds.toList(),
+        selectedRacialSkillIds = selectedRacialSkillIds.toList(),
+        racialWeaponProficiencyIds = vm.character.value.racialWeaponProficiencyIds,
+        racialArmourProficiencyIds = vm.character.value.racialArmourProficiencyIds,
+        racialToolProficiencyIds = vm.character.value.racialToolProficiencyIds,
+        racialTraitNames = vm.character.value.racialTraitNames,
+        selectedRacialAbilityBonusIds = selectedFlexibleAbilityIds.toList(),
+        selectedRacialLanguageIds = selectedRacialLanguageIds.toList(),
+        racialSpellIds = vm.character.value.racialSpellIds,
+        selectedRacialSpellId = selectedRacialSpellId,
+        damageResistanceType = selectedRaceVariant?.damageResistanceType.orEmpty(),
+        breathWeaponDamageType = selectedRaceVariant?.breathWeaponDamageType.orEmpty(),
+        breathWeaponShape = selectedRaceVariant?.breathWeaponShape.orEmpty(),
+        breathWeaponSaveAbility =
+            selectedRaceVariant?.breathWeaponSaveAbility?.name.orEmpty(),
+        toolProficiencyIds = vm.character.value.toolProficiencyIds,
+        languages = vm.character.value.languages,
+        goldPieces = vm.character.value.goldPieces,
+        backgroundFeatureName = vm.character.value.backgroundFeatureName,
+        backgroundFeatureDescription = vm.character.value.backgroundFeatureDescription,
+        personalityTraits = vm.character.value.personalityTraits,
+        ideal = vm.character.value.ideal,
+        bond = vm.character.value.bond,
+        flaw = vm.character.value.flaw,
         knownSpellIds = vm.character.value.knownSpellIds,
         preparedSpellIds = vm.character.value.preparedSpellIds
     )
@@ -187,7 +356,17 @@ fun ScreenCharacterEdit(
                 label = "Race",
                 options = races.map { CompendiumOption(it.id, it.name) },
                 selectedId = selectedRaceId,
-                onSelected = { selectedRaceId = it }
+                onSelected = { raceId ->
+                    selectedRaceId = raceId
+                    selectedRaceVariantId = vm.getRaceVariantsForRace(raceId)
+                        .firstOrNull()
+                        ?.id
+                        .orEmpty()
+                    selectedFlexibleAbilityIds.clear()
+                    selectedRacialSkillIds.clear()
+                    selectedRacialLanguageIds.clear()
+                    selectedRacialSpellId = ""
+                }
             )
 
             selectedRace?.let { raceDef ->
@@ -197,7 +376,173 @@ fun ScreenCharacterEdit(
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = "Bonuses: ${CompendiumLookup.formatStatBonuses(raceDef)} • Speed: ${raceDef.speed}",
+                    text = "Bonuses: ${
+                        CompendiumLookup.formatStatBonuses(
+                            raceDef,
+                            selectedRaceVariant
+                        )
+                    } • Speed: ${selectedRaceVariant?.speedOverride ?: raceDef.speed}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            if (raceVariants.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                CompendiumDropdown(
+                    label = if (selectedRaceId == "dragonborn") {
+                        "Draconic Ancestry"
+                    } else {
+                        "Subrace"
+                    },
+                    options = raceVariants.map {
+                        CompendiumOption(it.id, it.name)
+                    },
+                    selectedId = selectedRaceVariantId,
+                    onSelected = { variantId ->
+                        selectedRaceVariantId = variantId
+                        selectedFlexibleAbilityIds.clear()
+                        selectedRacialSkillIds.clear()
+                        selectedRacialLanguageIds.clear()
+                        selectedRacialSpellId = ""
+                    }
+                )
+
+                selectedRaceVariant?.let { variant ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        variant.description,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        "Traits: ${variant.passiveTraits.joinToString().ifBlank { "None" }}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            if (flexibleAbilityChoiceCount > 0) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Flexible Racial Ability Bonuses",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                repeat(flexibleAbilityChoiceCount) { index ->
+                    Spacer(Modifier.height(6.dp))
+                    val selectedId =
+                        selectedFlexibleAbilityIds.getOrNull(index).orEmpty()
+                    val blocked = selectedFlexibleAbilityIds
+                        .filterIndexed { otherIndex, _ -> otherIndex != index }
+                        .toSet()
+                    CompendiumDropdown(
+                        label = "Ability Bonus ${index + 1}",
+                        options = flexibleAbilityChoices
+                            .filterNot { it.name in blocked }
+                            .map {
+                                CompendiumOption(
+                                    it.name,
+                                    CompendiumLookup.abilityLabel(it)
+                                )
+                            },
+                        selectedId = selectedId,
+                        onSelected = { abilityId ->
+                            if (index < selectedFlexibleAbilityIds.size) {
+                                selectedFlexibleAbilityIds[index] = abilityId
+                            } else {
+                                selectedFlexibleAbilityIds.add(abilityId)
+                            }
+                        }
+                    )
+                }
+            }
+
+            if (racialSkillChoiceCount > 0) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Racial Skill Choices",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                repeat(racialSkillChoiceCount) { index ->
+                    Spacer(Modifier.height(6.dp))
+                    val selectedId = selectedRacialSkillIds.getOrNull(index).orEmpty()
+                    val blocked = selectedRacialSkillIds
+                        .filterIndexed { otherIndex, _ -> otherIndex != index }
+                        .toSet()
+                    CompendiumDropdown(
+                        label = "Racial Skill ${index + 1}",
+                        options = racialSkillOptions
+                            .filterNot { it in blocked }
+                            .map { CompendiumOption(it, it) },
+                        selectedId = selectedId,
+                        onSelected = { skill ->
+                            if (index < selectedRacialSkillIds.size) {
+                                selectedRacialSkillIds[index] = skill
+                            } else {
+                                selectedRacialSkillIds.add(skill)
+                            }
+                        }
+                    )
+                }
+            }
+
+            if (racialLanguageChoiceCount > 0) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Racial Language Choices",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                repeat(racialLanguageChoiceCount) { index ->
+                    Spacer(Modifier.height(6.dp))
+                    val selectedId =
+                        selectedRacialLanguageIds.getOrNull(index).orEmpty()
+                    val blocked = selectedRacialLanguageIds
+                        .filterIndexed { otherIndex, _ -> otherIndex != index }
+                        .toSet()
+                    CompendiumDropdown(
+                        label = "Language ${index + 1}",
+                        options = racialLanguageOptions
+                            .filterNot { it in blocked }
+                            .map { CompendiumOption(it, it) },
+                        selectedId = selectedId,
+                        onSelected = { language ->
+                            if (index < selectedRacialLanguageIds.size) {
+                                selectedRacialLanguageIds[index] = language
+                            } else {
+                                selectedRacialLanguageIds.add(language)
+                            }
+                        }
+                    )
+                }
+            }
+
+            if (racialCantripOptions.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                CompendiumDropdown(
+                    label = "Racial Cantrip",
+                    options = racialCantripOptions.map {
+                        CompendiumOption(it.id, it.name)
+                    },
+                    selectedId = selectedRacialSpellId,
+                    onSelected = { selectedRacialSpellId = it }
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            CompendiumDropdown(
+                label = "Background",
+                options = backgrounds.map { CompendiumOption(it.id, it.name) },
+                selectedId = selectedBackgroundId,
+                onSelected = { selectedBackgroundId = it }
+            )
+
+            selectedBackground?.let { backgroundDef ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = backgroundDef.description,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Skills: ${backgroundDef.skillProficiencyIds.joinToString()} • Feature: ${backgroundDef.featureName}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -307,6 +652,18 @@ fun ScreenCharacterEdit(
                         name.isBlank() -> error = "Name is required"
                         selectedClassId.isBlank() -> error = "Class is required"
                         selectedRaceId.isBlank() -> error = "Race is required"
+                        raceVariants.isNotEmpty() && selectedRaceVariantId.isBlank() ->
+                            error = "Ancestry is required"
+                        selectedFlexibleAbilityIds.size != flexibleAbilityChoiceCount ->
+                            error = "Choose every flexible racial ability bonus"
+                        selectedRacialSkillIds.size != racialSkillChoiceCount ->
+                            error = "Choose every racial skill"
+                        selectedRacialLanguageIds.size != racialLanguageChoiceCount ->
+                            error = "Choose every racial language"
+                        racialCantripOptions.isNotEmpty() &&
+                            selectedRacialSpellId.isBlank() ->
+                            error = "Choose a racial cantrip"
+                        selectedBackgroundId.isBlank() -> error = "Background is required"
                         level == null || level !in 1..20 -> error = "Level must be 1–20"
                         listOf(str, dex, con, intScore, wis, cha).any { it == null || it !in 1..20 } ->
                             error = "All ability scores must be between 1 and 20"
@@ -316,6 +673,8 @@ fun ScreenCharacterEdit(
                                 name = name.trim(),
                                 characterClass = selectedClassId.trim(),
                                 race = selectedRaceId.trim(),
+                                raceVariant = selectedRaceVariantId.trim(),
+                                background = selectedBackgroundId.trim(),
                                 level = level,
                                 notes = trimmedNotes,
                                 strength = str!!,
@@ -324,6 +683,13 @@ fun ScreenCharacterEdit(
                                 intelligence = intScore!!,
                                 wisdom = wis!!,
                                 charisma = cha!!,
+                                selectedRacialAbilityBonusIds =
+                                    selectedFlexibleAbilityIds.toList(),
+                                selectedRacialSkillIds =
+                                    selectedRacialSkillIds.toList(),
+                                selectedRacialLanguageIds =
+                                    selectedRacialLanguageIds.toList(),
+                                selectedRacialSpellId = selectedRacialSpellId,
                                 imageUri = selectedImageUri,
                                 onSuccess = onDone
                             )

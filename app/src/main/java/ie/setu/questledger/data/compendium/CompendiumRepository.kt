@@ -8,7 +8,16 @@ class CompendiumRepository @Inject constructor() : CompendiumService {
 
     override fun getRaces(): List<RaceDefinition> = SeedCompendiumData.races
 
+    override fun getRaceVariants(): List<RaceVariantDefinition> =
+        SeedCompendiumData.raceVariants
+
+    override fun getRaceVariantsForRace(raceId: String): List<RaceVariantDefinition> {
+        return SeedCompendiumData.raceVariants.filter { it.raceId == raceId }
+    }
+
     override fun getClasses(): List<ClassDefinition> = SeedCompendiumData.classes
+
+    override fun getBackgrounds(): List<BackgroundDefinition> = SeedCompendiumData.backgrounds
 
     override fun getWeapons(): List<WeaponDefinition> = SeedCompendiumData.weapons
 
@@ -20,8 +29,16 @@ class CompendiumRepository @Inject constructor() : CompendiumService {
         return SeedCompendiumData.races.firstOrNull { it.id == id }
     }
 
+    override fun getRaceVariantById(id: String): RaceVariantDefinition? {
+        return SeedCompendiumData.raceVariants.firstOrNull { it.id == id }
+    }
+
     override fun getClassById(id: String): ClassDefinition? {
         return SeedCompendiumData.classes.firstOrNull { it.id == id }
+    }
+
+    override fun getBackgroundById(id: String): BackgroundDefinition? {
+        return SeedCompendiumData.backgrounds.firstOrNull { it.id == id }
     }
 
     override fun getWeaponById(id: String): WeaponDefinition? {

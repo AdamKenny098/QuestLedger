@@ -19,6 +19,10 @@ object CharacterStatEngine {
         val race = SeedCompendiumData.races.firstOrNull {
             it.id.equals(character.race, ignoreCase = true)
         }
+        val raceVariant = SeedCompendiumData.raceVariants.firstOrNull {
+            it.id.equals(character.raceVariant, ignoreCase = true) &&
+                it.raceId.equals(character.race, ignoreCase = true)
+        }
 
         val progression = CharacterProgressionRules.build(
             classId = character.characterClass,
@@ -43,7 +47,8 @@ object CharacterStatEngine {
         val maxHp = calculateMaxHp(
             level = character.level,
             hitDie = progression.hitDie,
-            conMod = conMod
+            conMod = conMod,
+            racialHitPointsPerLevelBonus = raceVariant?.hitPointsPerLevelBonus ?: 0
         )
 
         val shieldBonus = if (inventory.items.isEmpty()) {
@@ -106,7 +111,8 @@ object CharacterStatEngine {
             carryCapacity = (character.strength * 15).coerceAtLeast(0),
             inventoryCapacity = inventory.capacitySlots,
             speed = (
-                (race?.speed ?: 30) - (equippedArmour?.movementPenalty ?: 0)
+                (raceVariant?.speedOverride ?: race?.speed ?: 30) -
+                    (equippedArmour?.movementPenalty ?: 0)
                 ).coerceAtLeast(0),
             hitDie = progression.hitDie,
             weaponName = equippedWeapon?.name,
@@ -122,15 +128,21 @@ object CharacterStatEngine {
         return floor((score - 10) / 2.0).toInt()
     }
 
-    private fun calculateMaxHp(level: Int, hitDie: Int, conMod: Int): Int {
+    private fun calculateMaxHp(
+        level: Int,
+        hitDie: Int,
+        conMod: Int,
+        racialHitPointsPerLevelBonus: Int
+    ): Int {
         val clampedLevel = level.coerceAtLeast(1)
         val firstLevelHp = hitDie + conMod
         val laterLevelGain = ((hitDie / 2) + 1) + conMod
-        return if (clampedLevel == 1) {
+        val classHitPoints = if (clampedLevel == 1) {
             firstLevelHp.coerceAtLeast(1)
         } else {
             (firstLevelHp + ((clampedLevel - 1) * laterLevelGain)).coerceAtLeast(1)
         }
+        return classHitPoints + (clampedLevel * racialHitPointsPerLevelBonus)
     }
 
     private fun calculateArmourClass(

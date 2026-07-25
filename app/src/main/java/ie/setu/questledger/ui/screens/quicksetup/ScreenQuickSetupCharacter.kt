@@ -36,21 +36,45 @@ fun ScreenQuickSetupCharacter(
 ) {
     val races = remember { vm.getRaces() }
     val classes = remember { vm.getClasses() }
+    val backgrounds = remember { vm.getBackgrounds() }
 
     var name by remember { mutableStateOf("") }
     var selectedRaceId by remember { mutableStateOf(races.firstOrNull()?.id.orEmpty()) }
+    var selectedRaceVariantId by remember {
+        mutableStateOf(
+            vm.getRaceVariantsForRace(races.firstOrNull()?.id.orEmpty())
+                .firstOrNull()
+                ?.id
+                .orEmpty()
+        )
+    }
     var selectedClassId by remember { mutableStateOf(classes.firstOrNull()?.id.orEmpty()) }
+    var selectedBackgroundId by remember {
+        mutableStateOf(backgrounds.firstOrNull()?.id.orEmpty())
+    }
     var level by remember { mutableStateOf(1) }
     var localError by remember { mutableStateOf<String?>(null) }
+    val raceVariants = remember(selectedRaceId) {
+        vm.getRaceVariantsForRace(selectedRaceId)
+    }
 
     val config = QuickSetupConfig(
         name = name,
         raceId = selectedRaceId,
         classId = selectedClassId,
-        level = level
+        level = level,
+        backgroundId = selectedBackgroundId,
+        raceVariantId = selectedRaceVariantId
     )
 
-    val preview = remember(name, selectedRaceId, selectedClassId, level) {
+    val preview = remember(
+        name,
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedClassId,
+        selectedBackgroundId,
+        level
+    ) {
         vm.buildPreview(config)
     }
 
@@ -67,7 +91,7 @@ fun ScreenQuickSetupCharacter(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                "Fast character creation for new players. Pick a class, race, and level, and QuestLedger will build a starter character for you.",
+                "Fast character creation for new players. Pick a class, race, background, and level, and QuestLedger will build a starter character for you.",
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -105,7 +129,37 @@ fun ScreenQuickSetupCharacter(
                 label = "Race",
                 options = races.map { CompendiumOption(it.id, it.name) },
                 selectedId = selectedRaceId,
-                onSelected = { selectedRaceId = it }
+                onSelected = { raceId ->
+                    selectedRaceId = raceId
+                    selectedRaceVariantId = vm.getRaceVariantsForRace(raceId)
+                        .firstOrNull()
+                        ?.id
+                        .orEmpty()
+                }
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            if (raceVariants.isNotEmpty()) {
+                CompendiumDropdown(
+                    label = if (selectedRaceId == "dragonborn") {
+                        "Draconic Ancestry"
+                    } else {
+                        "Subrace"
+                    },
+                    options = raceVariants.map { CompendiumOption(it.id, it.name) },
+                    selectedId = selectedRaceVariantId,
+                    onSelected = { selectedRaceVariantId = it }
+                )
+
+                Spacer(Modifier.height(10.dp))
+            }
+
+            CompendiumDropdown(
+                label = "Background",
+                options = backgrounds.map { CompendiumOption(it.id, it.name) },
+                selectedId = selectedBackgroundId,
+                onSelected = { selectedBackgroundId = it }
             )
 
             Spacer(Modifier.height(10.dp))
@@ -172,6 +226,9 @@ fun ScreenQuickSetupCharacter(
                         name.isBlank() -> localError = "Name is required"
                         selectedClassId.isBlank() -> localError = "Class is required"
                         selectedRaceId.isBlank() -> localError = "Race is required"
+                        raceVariants.isNotEmpty() && selectedRaceVariantId.isBlank() ->
+                            localError = "Ancestry is required"
+                        selectedBackgroundId.isBlank() -> localError = "Background is required"
                         level !in 1..20 -> localError = "Level must be between 1 and 20"
                         else -> {
                             localError = null

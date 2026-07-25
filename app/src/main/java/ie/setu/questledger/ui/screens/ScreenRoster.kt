@@ -211,7 +211,7 @@ private fun CharacterCard(
         }
 
         Text(
-            text = "${c.name} — ${CompendiumLookup.raceDisplayName(c.race)} ${CompendiumLookup.classDisplayName(c.characterClass)} (Lv ${c.level})",
+            text = "${c.name} — ${CompendiumLookup.characterRaceDisplayName(c.race, c.raceVariant)} ${CompendiumLookup.classDisplayName(c.characterClass)} (Lv ${c.level})",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .fillMaxWidth()

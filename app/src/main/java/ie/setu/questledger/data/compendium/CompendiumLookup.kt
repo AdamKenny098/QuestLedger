@@ -11,6 +11,14 @@ object CompendiumLookup {
         }
     }
 
+    fun findRaceVariant(value: String): RaceVariantDefinition? {
+        if (value.isBlank()) return null
+        val key = norm(value)
+        return SeedCompendiumData.raceVariants.firstOrNull {
+            norm(it.id) == key || norm(it.name) == key
+        }
+    }
+
     fun findClass(value: String): ClassDefinition? {
         if (value.isBlank()) return null
         val key = norm(value)
@@ -19,12 +27,32 @@ object CompendiumLookup {
         }
     }
 
+    fun findBackground(value: String): BackgroundDefinition? {
+        if (value.isBlank()) return null
+        val key = norm(value)
+        return SeedCompendiumData.backgrounds.firstOrNull {
+            norm(it.id) == key || norm(it.name) == key
+        }
+    }
+
     fun raceDisplayName(value: String): String {
         return findRace(value)?.name ?: value.ifBlank { "Unknown Race" }
     }
 
+    fun raceVariantDisplayName(value: String): String {
+        return findRaceVariant(value)?.name ?: value.ifBlank { "No Ancestry" }
+    }
+
+    fun characterRaceDisplayName(race: String, raceVariant: String): String {
+        return findRaceVariant(raceVariant)?.name ?: raceDisplayName(race)
+    }
+
     fun classDisplayName(value: String): String {
         return findClass(value)?.name ?: value.ifBlank { "Unknown Class" }
+    }
+
+    fun backgroundDisplayName(value: String): String {
+        return findBackground(value)?.name ?: value.ifBlank { "No Background" }
     }
 
     fun abilityLabel(ability: AbilityType): String{
@@ -54,6 +82,27 @@ object CompendiumLookup {
         val fixed = formatStatBonuses(race.statBonuses)
         val flexible = race.flexibleStatBonuses.joinToString(", ") { "+$it to another ability" }
         return listOf(fixed, flexible)
+            .filter { it.isNotBlank() && it != "No bonuses" }
+            .joinToString(", ")
+            .ifBlank { "No bonuses" }
+    }
+
+    fun formatStatBonuses(
+        race: RaceDefinition,
+        raceVariant: RaceVariantDefinition?
+    ): String {
+        val fixed = (race.statBonuses.keys + raceVariant?.statBonuses.orEmpty().keys)
+            .distinct()
+            .associateWith { ability ->
+                (race.statBonuses[ability] ?: 0) +
+                    (raceVariant?.statBonuses?.get(ability) ?: 0)
+            }
+            .filterValues { it != 0 }
+        val fixedText = formatStatBonuses(fixed)
+        val flexible = race.flexibleStatBonuses.joinToString(", ") {
+            "+$it to another ability"
+        }
+        return listOf(fixedText, flexible)
             .filter { it.isNotBlank() && it != "No bonuses" }
             .joinToString(", ")
             .ifBlank { "No bonuses" }

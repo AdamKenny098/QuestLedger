@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ie.setu.questledger.data.auth.AuthService
 import ie.setu.questledger.data.compendium.CompendiumService
+import ie.setu.questledger.data.compendium.AbilityType
+import ie.setu.questledger.data.compendium.SeedRaceVariantData
 import ie.setu.questledger.data.firestore.FirestoreService
+import ie.setu.questledger.data.rules.CharacterRaceRules
 import ie.setu.questledger.data.rules.FullSetupEngine
 import ie.setu.questledger.data.rules.FullSetupResult
 import ie.setu.questledger.models.FullSetupConfig
@@ -27,9 +30,80 @@ class FullSetupViewModel @Inject constructor(
 
     fun getClasses() = compendiumService.getClasses()
     fun getRaces() = compendiumService.getRaces()
+    fun getRaceVariantsForRace(raceId: String) =
+        compendiumService.getRaceVariantsForRace(raceId)
+    fun getBackgrounds() = compendiumService.getBackgrounds()
     fun getWeapons() = compendiumService.getWeapons()
     fun getArmour() = compendiumService.getArmour()
     fun getSpells() = compendiumService.getSpells()
+
+    fun getFlexibleAbilityChoices(
+        raceId: String,
+        raceVariantId: String
+    ): List<AbilityType> {
+        val race = compendiumService.getRaceById(raceId) ?: return emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return CharacterRaceRules.availableFlexibleAbilities(race, variant)
+    }
+
+    fun getFlexibleAbilityChoiceCount(raceId: String): Int {
+        return compendiumService.getRaceById(raceId)?.flexibleStatBonuses?.size ?: 0
+    }
+
+    fun getRacialSkillOptions(raceId: String, raceVariantId: String): List<String> {
+        val race = compendiumService.getRaceById(raceId) ?: return emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return (race.skillChoiceOptions + variant?.skillChoiceOptions.orEmpty())
+            .distinct()
+            .ifEmpty { SeedRaceVariantData.allSkills }
+    }
+
+    fun getRacialSkillChoiceCount(raceId: String, raceVariantId: String): Int {
+        val race = compendiumService.getRaceById(raceId) ?: return 0
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return race.skillChoiceCount + (variant?.skillChoiceCount ?: 0)
+    }
+
+    fun getFixedRacialSkillIds(raceId: String, raceVariantId: String): List<String> {
+        val race = compendiumService.getRaceById(raceId) ?: return emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return (race.skillProficiencyIds + variant?.skillProficiencyIds.orEmpty())
+            .distinct()
+    }
+
+    fun getRacialLanguageChoiceCount(raceId: String, raceVariantId: String): Int {
+        val race = compendiumService.getRaceById(raceId) ?: return 0
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return race.languageChoiceCount + (variant?.languageChoiceCount ?: 0)
+    }
+
+    fun getRacialLanguageOptions(
+        raceId: String,
+        raceVariantId: String,
+        backgroundId: String
+    ): List<String> {
+        val race = compendiumService.getRaceById(raceId) ?: return emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        val background = compendiumService.getBackgroundById(backgroundId)
+        val blocked = (
+            race.languages +
+                variant?.languages.orEmpty() +
+                background?.suggestedLanguages.orEmpty()
+            ).toSet()
+        return SeedRaceVariantData.languageOptions.filterNot { it in blocked }
+    }
+
+    fun getRacialCantripOptions(raceVariantId: String) =
+        CharacterRaceRules.availableRacialCantrips(
+            variant = compendiumService.getRaceVariantById(raceVariantId),
+            spells = compendiumService.getSpells()
+        )
 
     fun getSuggestedProficienciesForClass(classId: String): List<String> {
         return compendiumService.getClassById(classId)?.skillProficiencies.orEmpty()
