@@ -16,7 +16,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,6 +51,8 @@ fun ScreenQuickSetupCharacter(
         )
     }
     var selectedClassId by remember { mutableStateOf(classes.firstOrNull()?.id.orEmpty()) }
+    var selectedSubclassId by remember { mutableStateOf("") }
+    val selectedSubclassChoiceIds = remember { mutableStateListOf<String>() }
     var selectedBackgroundId by remember {
         mutableStateOf(backgrounds.firstOrNull()?.id.orEmpty())
     }
@@ -57,14 +61,66 @@ fun ScreenQuickSetupCharacter(
     val raceVariants = remember(selectedRaceId) {
         vm.getRaceVariantsForRace(selectedRaceId)
     }
+    val classSubclasses = remember(selectedClassId) {
+        vm.getSubclassesForClass(selectedClassId)
+    }
+    val availableSubclasses = remember(selectedClassId, level) {
+        vm.getSubclassesForClass(selectedClassId)
+            .filter { it.selectionLevel <= level }
+    }
+    val selectedSubclass = remember(selectedSubclassId, availableSubclasses) {
+        availableSubclasses.firstOrNull { it.id == selectedSubclassId }
+    }
+    val subclassChoiceGroups = remember(
+        selectedSubclassId,
+        level,
+        selectedSubclassChoiceIds.toList()
+    ) {
+        selectedSubclass
+            ?.choiceGroups
+            .orEmpty()
+            .filter { it.minimumLevel <= level }
+    }
+
+    LaunchedEffect(selectedClassId, level, selectedSubclassId) {
+        if (availableSubclasses.isEmpty()) {
+            selectedSubclassId = ""
+            selectedSubclassChoiceIds.clear()
+            return@LaunchedEffect
+        }
+        val validSubclass = availableSubclasses.firstOrNull {
+            it.id == selectedSubclassId
+        }
+        if (validSubclass == null) {
+            selectedSubclassId = availableSubclasses.first().id
+            return@LaunchedEffect
+        }
+        val normalisedChoices = validSubclass.choiceGroups
+            .filter { it.minimumLevel <= level }
+            .flatMap { group ->
+                val optionIds = group.options.map { it.id }
+                (
+                    selectedSubclassChoiceIds.filter { it in optionIds } +
+                        optionIds
+                    )
+                    .distinct()
+                    .take(group.selectionCount)
+            }
+        if (normalisedChoices != selectedSubclassChoiceIds.toList()) {
+            selectedSubclassChoiceIds.clear()
+            selectedSubclassChoiceIds.addAll(normalisedChoices)
+        }
+    }
 
     val config = QuickSetupConfig(
         name = name,
         raceId = selectedRaceId,
         classId = selectedClassId,
+        subclassId = selectedSubclassId,
         level = level,
         backgroundId = selectedBackgroundId,
-        raceVariantId = selectedRaceVariantId
+        raceVariantId = selectedRaceVariantId,
+        selectedSubclassChoiceIds = selectedSubclassChoiceIds.toList()
     )
 
     val preview = remember(
@@ -72,6 +128,8 @@ fun ScreenQuickSetupCharacter(
         selectedRaceId,
         selectedRaceVariantId,
         selectedClassId,
+        selectedSubclassId,
+        selectedSubclassChoiceIds.toList(),
         selectedBackgroundId,
         level
     ) {
@@ -179,6 +237,70 @@ fun ScreenQuickSetupCharacter(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            if (availableSubclasses.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                CompendiumDropdown(
+                    label = "Subclass",
+                    options = availableSubclasses.map {
+                        CompendiumOption(it.id, it.name)
+                    },
+                    selectedId = selectedSubclassId,
+                    onSelected = {
+                        selectedSubclassId = it
+                        selectedSubclassChoiceIds.clear()
+                    }
+                )
+                selectedSubclass?.let { subclass ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        subclass.description,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                subclassChoiceGroups.forEach { group ->
+                    repeat(group.selectionCount) { index ->
+                        val optionIds = group.options.map { it.id }.toSet()
+                        val selectedForGroup =
+                            selectedSubclassChoiceIds.filter { it in optionIds }
+                        val selectedId = selectedForGroup.getOrNull(index).orEmpty()
+                        val blocked = selectedForGroup
+                            .filterIndexed { otherIndex, _ -> otherIndex != index }
+                            .toSet()
+                        Spacer(Modifier.height(8.dp))
+                        CompendiumDropdown(
+                            label = if (group.selectionCount == 1) {
+                                group.name
+                            } else {
+                                "${group.name} ${index + 1}"
+                            },
+                            options = group.options
+                                .filterNot { it.id in blocked }
+                                .map { CompendiumOption(it.id, it.name) },
+                            selectedId = selectedId,
+                            onSelected = { optionId ->
+                                val oldId = selectedForGroup.getOrNull(index)
+                                if (oldId != null) {
+                                    val listIndex =
+                                        selectedSubclassChoiceIds.indexOf(oldId)
+                                    selectedSubclassChoiceIds[listIndex] = optionId
+                                } else {
+                                    selectedSubclassChoiceIds.add(optionId)
+                                }
+                            }
+                        )
+                    }
+                }
+            } else {
+                classSubclasses.firstOrNull()?.let { futureSubclass ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Subclass unlocks at level ${futureSubclass.selectionLevel}.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
             Spacer(Modifier.height(16.dp))
 
             preview?.let { result ->
@@ -230,6 +352,9 @@ fun ScreenQuickSetupCharacter(
                             localError = "Ancestry is required"
                         selectedBackgroundId.isBlank() -> localError = "Background is required"
                         level !in 1..20 -> localError = "Level must be between 1 and 20"
+                        availableSubclasses.isNotEmpty() &&
+                            selectedSubclassId.isBlank() ->
+                            localError = "Subclass is required at this level"
                         else -> {
                             localError = null
                             vm.saveQuickSetup(config) {

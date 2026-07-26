@@ -15,14 +15,22 @@ import ie.setu.questledger.data.compendium.AbilityType
 import ie.setu.questledger.data.compendium.SeedRaceVariantData
 import ie.setu.questledger.data.firestore.FirestoreService
 import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.rules.CharacterSessionRules
+import ie.setu.questledger.data.rules.CharacterFeatureRules
 import ie.setu.questledger.data.rules.CharacterBackgroundRules
+import ie.setu.questledger.data.rules.CharacterAdvancementRules
 import ie.setu.questledger.data.rules.CharacterRaceRules
+import ie.setu.questledger.data.rules.CharacterSubclassRules
+import ie.setu.questledger.data.rules.CurrencyRules
 import ie.setu.questledger.data.rules.InventoryEngine
 import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.models.characters.CharacterModel
-import ie.setu.questledger.models.inventory.InventoryItemModel
-import ie.setu.questledger.models.inventory.InventoryItemType
+import ie.setu.questledger.models.characters.CharacterAdvancementSelection
+import ie.setu.questledger.models.inventory.CurrencyDenomination
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.random.Random
 import javax.inject.Inject
 @HiltViewModel
 class CharacterDetailsViewModel @Inject constructor(
@@ -42,12 +50,23 @@ class CharacterDetailsViewModel @Inject constructor(
     var isErr = mutableStateOf(false)
     var error = mutableStateOf(Exception())
     var isLoading = mutableStateOf(false)
+    var isSessionSaving = mutableStateOf(false)
+    var sessionMessage = mutableStateOf("")
+
+    private val sessionSaveMutex = Mutex()
 
     init {
         viewModelScope.launch {
             try {
                 isLoading.value = true
-                character.value = repository.get(authService.email, id) ?: CharacterModel()
+                val loaded = repository.get(authService.email, id) ?: CharacterModel()
+                val playableCharacter = CharacterSessionRules.normalise(
+                    CharacterSubclassRules.normalise(loaded)
+                )
+                character.value = playableCharacter
+                if (loaded.id.isNotBlank() && loaded != playableCharacter) {
+                    repository.update(authService.email, playableCharacter)
+                }
                 isLoading.value = false
             } catch (e: Exception) {
                 isLoading.value = false
@@ -64,7 +83,21 @@ class CharacterDetailsViewModel @Inject constructor(
 
     fun getClasses(): List<ClassDefinition> = compendiumService.getClasses()
 
+    fun getSubclassesForClass(classId: String) =
+        compendiumService.getSubclassesForClass(classId)
+
+    fun getSubclassChoiceGroups(subclassId: String, level: Int) =
+        CharacterSubclassRules.unlockedChoiceGroups(
+            compendiumService.getSubclassById(subclassId),
+            level
+        )
+
     fun getBackgrounds(): List<BackgroundDefinition> = compendiumService.getBackgrounds()
+
+    fun getEquipmentCatalogue() = compendiumService.getEquipmentCatalogue()
+
+    fun getEquipmentPacks() = compendiumService.getEquipmentPacks()
+    fun getFeats() = compendiumService.getFeats()
 
     fun getFlexibleAbilityChoices(
         raceId: String,
@@ -76,8 +109,13 @@ class CharacterDetailsViewModel @Inject constructor(
         return CharacterRaceRules.availableFlexibleAbilities(race, variant)
     }
 
-    fun getFlexibleAbilityChoiceCount(raceId: String): Int {
-        return compendiumService.getRaceById(raceId)?.flexibleStatBonuses?.size ?: 0
+    fun getFlexibleAbilityChoiceCount(raceId: String, raceVariantId: String): Int {
+        val race = compendiumService.getRaceById(raceId) ?: return 0
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return ie.setu.questledger.data.rules.AbilityScoreRules
+            .effectiveFlexibleBonuses(race, variant)
+            .size
     }
 
     fun getRacialSkillOptions(raceId: String, raceVariantId: String): List<String> {
@@ -156,64 +194,57 @@ class CharacterDetailsViewModel @Inject constructor(
     fun unequipSpellFocus() {
         val current = character.value
         character.value = current.copy(
-            inventory = current.inventory.copy(
-                equipped = current.inventory.equipped.copy(spellFocusId = null)
-            )
+            inventory = InventoryEngine.unequipSpellFocus(current.inventory)
         )
     }
 
     fun removeItem(itemId: String) {
         val current = character.value
-        val removedInventory = InventoryEngine.removeItem(current.inventory, itemId)
-        val cleanedInventory = removedInventory.copy(
-            equipped = removedInventory.equipped.copy(
-                weaponId = if (removedInventory.equipped.weaponId == itemId) null else removedInventory.equipped.weaponId,
-                armourId = if (removedInventory.equipped.armourId == itemId) null else removedInventory.equipped.armourId,
-                offhandId = if (removedInventory.equipped.offhandId == itemId) null else removedInventory.equipped.offhandId,
-                spellFocusId = if (removedInventory.equipped.spellFocusId == itemId) null else removedInventory.equipped.spellFocusId
+        character.value = current.copy(
+            inventory = InventoryEngine.removeItem(current.inventory, itemId)
+        )
+    }
+
+    fun changeItemQuantity(itemId: String, delta: Int) {
+        val current = character.value
+        character.value = current.copy(
+            inventory = InventoryEngine.changeQuantity(
+                current.inventory,
+                itemId,
+                delta
             )
         )
-        character.value = current.copy(inventory = cleanedInventory)
     }
 
-    fun addTestPotion() {
+    fun addCatalogueItem(itemId: String) {
         val current = character.value
-        val item = InventoryItemModel(
-            id = "potion_healing_${System.currentTimeMillis()}",
-            name = "Healing Potion",
-            type = InventoryItemType.CONSUMABLE,
-            slotCost = 1,
-            quantity = 1
+        val entry = compendiumService.getEquipmentCatalogueItemById(itemId) ?: return
+        character.value = current.copy(
+            inventory = InventoryEngine.addCatalogueItem(current.inventory, entry)
         )
-        val updated = InventoryEngine.addItem(current.inventory, item)
-        character.value = current.copy(inventory = updated)
     }
 
-    fun addTestTool() {
+    fun addEquipmentPack(packId: String) {
         val current = character.value
-        val item = InventoryItemModel(
-            id = "tool_kit_${System.currentTimeMillis()}",
-            name = "Tool Kit",
-            type = InventoryItemType.TOOL,
-            slotCost = 2,
-            quantity = 1
+        val pack = compendiumService.getEquipmentPackById(packId) ?: return
+        character.value = current.copy(
+            inventory = InventoryEngine.addEquipmentPack(
+                inventory = current.inventory,
+                pack = pack,
+                catalogue = compendiumService.getEquipmentCatalogue()
+            )
         )
-        val updated = InventoryEngine.addItem(current.inventory, item)
-        character.value = current.copy(inventory = updated)
     }
 
-    fun addTestShield() {
-        val current = character.value
-        val item = InventoryItemModel(
-            id = "shield_extra_${System.currentTimeMillis()}",
-            name = "Extra Shield",
-            type = InventoryItemType.SHIELD,
-            slotCost = 2,
-            quantity = 1,
-            shieldBonus = 2
+    fun adjustCurrency(
+        denomination: CurrencyDenomination,
+        delta: Int
+    ) {
+        character.value = CurrencyRules.adjust(
+            character = character.value,
+            denomination = denomination,
+            delta = delta
         )
-        val updated = InventoryEngine.addItem(current.inventory, item)
-        character.value = current.copy(inventory = updated)
     }
 
     fun toggleKnownSpell(spellId: String) {
@@ -251,9 +282,192 @@ class CharacterDetailsViewModel @Inject constructor(
             preparedSpellIds = prepared
         )
     }
+
+    fun takeDamage(amount: Int) {
+        applySessionChange(
+            transform = { CharacterSessionRules.takeDamage(it, amount) },
+            successMessage = "Applied $amount damage."
+        )
+    }
+
+    fun heal(amount: Int) {
+        applySessionChange(
+            transform = { CharacterSessionRules.heal(it, amount) },
+            successMessage = "Restored $amount hit points."
+        )
+    }
+
+    fun setTemporaryHitPoints(amount: Int) {
+        applySessionChange(
+            transform = { CharacterSessionRules.setTemporaryHitPoints(it, amount) },
+            successMessage = "Temporary hit points set to $amount."
+        )
+    }
+
+    fun rollDeathSave() {
+        val roll = Random.nextInt(1, 21)
+        val result = CharacterSessionRules.rollDeathSave(character.value, roll)
+        applySessionChange(
+            transform = { result.character },
+            successMessage = "Rolled $roll. ${result.message}"
+        )
+    }
+
+    fun resetDeathSaves() {
+        applySessionChange(
+            transform = CharacterSessionRules::resetDeathSaves,
+            successMessage = "Death saves reset."
+        )
+    }
+
+    fun spendHitDie() {
+        val hitDie = CharacterStatEngine.build(character.value).hitDie
+        val roll = Random.nextInt(1, hitDie + 1)
+        runCatching {
+            CharacterSessionRules.spendHitDie(character.value, roll)
+        }.onSuccess { result ->
+            val modifier = if (result.constitutionModifier >= 0) {
+                "+${result.constitutionModifier}"
+            } else {
+                result.constitutionModifier.toString()
+            }
+            applySessionChange(
+                transform = { result.character },
+                successMessage =
+                    "Hit die: ${result.dieRoll} $modifier. " +
+                        "Recovered ${result.hitPointsRecovered} HP."
+            )
+        }.onFailure(::showSessionError)
+    }
+
+    fun useSpellSlot(spellLevel: Int) {
+        applySessionChange(
+            transform = { CharacterSessionRules.useSpellSlot(it, spellLevel) },
+            successMessage = "Used a level $spellLevel spell slot."
+        )
+    }
+
+    fun restoreSpellSlot(spellLevel: Int) {
+        applySessionChange(
+            transform = { CharacterSessionRules.restoreSpellSlot(it, spellLevel) },
+            successMessage = "Restored a level $spellLevel spell slot."
+        )
+    }
+
+    fun takeShortRest() {
+        val restoresPactMagic = character.value.characterClass.equals(
+            "warlock",
+            ignoreCase = true
+        )
+        applySessionChange(
+            transform = CharacterSessionRules::shortRest,
+            successMessage = if (restoresPactMagic) {
+                "Short rest complete. Pact Magic slots restored."
+            } else {
+                "Short rest complete. You may spend hit dice."
+            }
+        )
+    }
+
+    fun takeLongRest() {
+        applySessionChange(
+            transform = CharacterSessionRules::longRest,
+            successMessage = "Long rest complete. HP and spell slots restored."
+        )
+    }
+
+    fun toggleInspiration() {
+        applySessionChange(
+            transform = CharacterSessionRules::toggleInspiration,
+            successMessage = if (character.value.hasInspiration) {
+                "Inspiration removed."
+            } else {
+                "Inspiration granted."
+            }
+        )
+    }
+
+    fun useFeature(featureId: String, amount: Int) {
+        val secondWindRoll = if (featureId == "fighter_second_wind") {
+            Random.nextInt(1, 11)
+        } else {
+            null
+        }
+        runCatching {
+            CharacterFeatureRules.useFeature(
+                character = character.value,
+                featureId = featureId,
+                amount = amount,
+                secondWindRoll = secondWindRoll
+            )
+        }.onSuccess { result ->
+            applySessionChange(
+                transform = { result.character },
+                successMessage = result.message
+            )
+        }.onFailure(::showSessionError)
+    }
+
+    fun restoreFeature(featureId: String, amount: Int) {
+        applySessionChange(
+            transform = {
+                CharacterFeatureRules.restoreFeature(
+                    character = it,
+                    featureId = featureId,
+                    amount = amount
+                )
+            },
+            successMessage = "Restored feature resource."
+        )
+    }
+
+    fun endFeature(featureId: String) {
+        applySessionChange(
+            transform = { CharacterFeatureRules.endFeature(it, featureId) },
+            successMessage = "Feature ended."
+        )
+    }
+
+    private fun applySessionChange(
+        transform: (CharacterModel) -> CharacterModel,
+        successMessage: String
+    ) {
+        val updated = runCatching {
+            transform(character.value)
+        }.getOrElse {
+            showSessionError(it)
+            return
+        }
+
+        character.value = updated
+        sessionMessage.value = successMessage
+        isErr.value = false
+
+        viewModelScope.launch {
+            sessionSaveMutex.withLock {
+                try {
+                    isSessionSaving.value = true
+                    repository.update(authService.email, character.value)
+                } catch (e: Exception) {
+                    showSessionError(e)
+                } finally {
+                    isSessionSaving.value = false
+                }
+            }
+        }
+    }
+
+    private fun showSessionError(throwable: Throwable) {
+        val exception = throwable as? Exception ?: Exception(throwable)
+        isErr.value = true
+        error.value = exception
+        sessionMessage.value = exception.message ?: "Could not update session state."
+    }
+
     fun updateCharacter(
         name: String,
         characterClass: String,
+        subclass: String,
         race: String,
         raceVariant: String,
         background: String,
@@ -269,6 +483,8 @@ class CharacterDetailsViewModel @Inject constructor(
         selectedRacialSkillIds: List<String>,
         selectedRacialLanguageIds: List<String>,
         selectedRacialSpellId: String,
+        selectedSubclassChoiceIds: List<String>,
+        advancementSelections: List<CharacterAdvancementSelection>,
         imageUri: Uri?,
         onSuccess: () -> Unit
     ) {
@@ -305,6 +521,7 @@ class CharacterDetailsViewModel @Inject constructor(
                 }
                 val characterWithFormValues = currentCharacter.copy(
                     characterClass = characterClass,
+                    subclass = subclass,
                     level = level,
                     strength = strength,
                     dexterity = dexterity,
@@ -336,29 +553,70 @@ class CharacterDetailsViewModel @Inject constructor(
                     oldRace = newRace,
                     oldBackground = oldBackground
                 )
+                val characterWithSubclass = CharacterSubclassRules.applySelection(
+                    character = characterWithBackground,
+                    characterClass = newClass,
+                    level = level,
+                    requestedSubclassId = subclass,
+                    selectedChoiceIds = selectedSubclassChoiceIds,
+                    subclasses = compendiumService.getSubclasses(),
+                    spells = compendiumService.getSpells()
+                )
+                val characterWithoutOldAdvancement =
+                    CharacterAdvancementRules.replaceSelections(
+                        character = characterWithSubclass,
+                        oldSelections = currentCharacter.advancementSelections,
+                        newSelections = emptyList(),
+                        feats = compendiumService.getFeats()
+                    )
+                val baseScores = mapOf(
+                    AbilityType.STRENGTH to characterWithoutOldAdvancement.strength,
+                    AbilityType.DEXTERITY to characterWithoutOldAdvancement.dexterity,
+                    AbilityType.CONSTITUTION to characterWithoutOldAdvancement.constitution,
+                    AbilityType.INTELLIGENCE to characterWithoutOldAdvancement.intelligence,
+                    AbilityType.WISDOM to characterWithoutOldAdvancement.wisdom,
+                    AbilityType.CHARISMA to characterWithoutOldAdvancement.charisma
+                )
+                val resolvedVariant = compendiumService.getRaceVariantById(
+                    characterWithSubclass.raceVariant
+                )
+                CharacterAdvancementRules.validateSelections(
+                    selections = advancementSelections,
+                    characterClass = newClass,
+                    raceVariant = resolvedVariant,
+                    level = level,
+                    baseScores = baseScores,
+                    feats = compendiumService.getFeats(),
+                    racialArmourProficiencies =
+                        characterWithBackground.racialArmourProficiencyIds
+                )
+                val characterWithAdvancement =
+                    CharacterAdvancementRules.replaceSelections(
+                        character = characterWithSubclass,
+                        oldSelections = currentCharacter.advancementSelections,
+                        newSelections = advancementSelections,
+                        feats = compendiumService.getFeats()
+                    )
 
-                val baseCharacter = characterWithBackground.copy(
+                val baseCharacter = characterWithAdvancement.copy(
                     email = authService.email,
                     name = name,
                     characterClass = characterClass,
+                    subclass = characterWithAdvancement.subclass,
                     race = race,
-                    raceVariant = characterWithBackground.raceVariant,
+                    raceVariant = characterWithAdvancement.raceVariant,
                     background = background,
                     level = level,
                     notes = notes,
                     imageUri = uploadedImageUri,
-                    knownSpellIds = characterWithBackground.knownSpellIds,
-                    preparedSpellIds = characterWithBackground.preparedSpellIds
+                    knownSpellIds = characterWithAdvancement.knownSpellIds,
+                    preparedSpellIds = characterWithAdvancement.preparedSpellIds,
+                    advancementSelections = advancementSelections
                 )
 
-                val derived = CharacterStatEngine.build(baseCharacter)
-
-                val updatedCharacter = baseCharacter.copy(
-                    currentHp = when {
-                        character.value.currentHp <= 0 -> derived.maxHp
-                        character.value.currentHp > derived.maxHp -> derived.maxHp
-                        else -> character.value.currentHp
-                    }
+                val updatedCharacter = CharacterSessionRules.reconcileProgression(
+                    oldCharacter = currentCharacter,
+                    updatedCharacter = baseCharacter
                 )
 
                 repository.update(authService.email, updatedCharacter)

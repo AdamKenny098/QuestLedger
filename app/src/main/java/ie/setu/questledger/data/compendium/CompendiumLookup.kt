@@ -27,10 +27,42 @@ object CompendiumLookup {
         }
     }
 
+    fun findSubclass(value: String): SubclassDefinition? {
+        if (value.isBlank()) return null
+        val key = norm(value)
+        return SeedCompendiumData.subclasses.firstOrNull {
+            norm(it.id) == key || norm(it.name) == key
+        }
+    }
+
     fun findBackground(value: String): BackgroundDefinition? {
         if (value.isBlank()) return null
         val key = norm(value)
         return SeedCompendiumData.backgrounds.firstOrNull {
+            norm(it.id) == key || norm(it.name) == key
+        }
+    }
+
+    fun findEquipment(value: String): EquipmentCatalogueItem? {
+        if (value.isBlank()) return null
+        val key = norm(value)
+        return SeedCompendiumData.equipmentCatalogue.firstOrNull {
+            norm(it.id) == key || norm(it.name) == key
+        }
+    }
+
+    fun findEquipmentPack(value: String): EquipmentPackDefinition? {
+        if (value.isBlank()) return null
+        val key = norm(value)
+        return SeedCompendiumData.equipmentPacks.firstOrNull {
+            norm(it.id) == key || norm(it.name) == key
+        }
+    }
+
+    fun findFeat(value: String): FeatDefinition? {
+        if (value.isBlank()) return null
+        val key = norm(value)
+        return SeedCompendiumData.feats.firstOrNull {
             norm(it.id) == key || norm(it.name) == key
         }
     }
@@ -51,8 +83,20 @@ object CompendiumLookup {
         return findClass(value)?.name ?: value.ifBlank { "Unknown Class" }
     }
 
+    fun subclassDisplayName(value: String): String {
+        return findSubclass(value)?.name ?: value.ifBlank { "No Subclass" }
+    }
+
     fun backgroundDisplayName(value: String): String {
         return findBackground(value)?.name ?: value.ifBlank { "No Background" }
+    }
+
+    fun equipmentDisplayName(value: String): String {
+        return findEquipment(value)?.name ?: value.ifBlank { "Unknown Equipment" }
+    }
+
+    fun featDisplayName(value: String): String {
+        return findFeat(value)?.name ?: value.ifBlank { "Unknown Feat" }
     }
 
     fun abilityLabel(ability: AbilityType): String{
@@ -91,15 +135,23 @@ object CompendiumLookup {
         race: RaceDefinition,
         raceVariant: RaceVariantDefinition?
     ): String {
-        val fixed = (race.statBonuses.keys + raceVariant?.statBonuses.orEmpty().keys)
-            .distinct()
-            .associateWith { ability ->
-                (race.statBonuses[ability] ?: 0) +
-                    (raceVariant?.statBonuses?.get(ability) ?: 0)
-            }
-            .filterValues { it != 0 }
+        val fixed = if (raceVariant?.replacesBaseStatBonuses == true) {
+            raceVariant.statBonuses
+        } else {
+            (race.statBonuses.keys + raceVariant?.statBonuses.orEmpty().keys)
+                .distinct()
+                .associateWith { ability ->
+                    (race.statBonuses[ability] ?: 0) +
+                        (raceVariant?.statBonuses?.get(ability) ?: 0)
+                }
+                .filterValues { it != 0 }
+        }
         val fixedText = formatStatBonuses(fixed)
-        val flexible = race.flexibleStatBonuses.joinToString(", ") {
+        val flexibleBonuses = raceVariant
+            ?.flexibleStatBonuses
+            ?.takeIf { it.isNotEmpty() }
+            ?: race.flexibleStatBonuses
+        val flexible = flexibleBonuses.joinToString(", ") {
             "+$it to another ability"
         }
         return listOf(fixedText, flexible)

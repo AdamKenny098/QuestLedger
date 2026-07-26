@@ -6,9 +6,12 @@ import ie.setu.questledger.data.compendium.ArmourType
 import ie.setu.questledger.data.compendium.BackgroundDefinition
 import ie.setu.questledger.data.compendium.ClassDefinition
 import ie.setu.questledger.data.compendium.CompendiumService
+import ie.setu.questledger.data.compendium.EquipmentDefinition
+import ie.setu.questledger.data.compendium.EquipmentPackDefinition
 import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.compendium.RaceVariantDefinition
 import ie.setu.questledger.data.compendium.SpellDefinition
+import ie.setu.questledger.data.compendium.SubclassDefinition
 import ie.setu.questledger.data.compendium.WeaponDefinition
 import ie.setu.questledger.models.FullSetupConfig
 import ie.setu.questledger.models.characters.CharacterModel
@@ -20,12 +23,16 @@ data class FullSetupResult(
     val race: RaceDefinition,
     val raceVariant: RaceVariantDefinition?,
     val characterClass: ClassDefinition,
+    val subclass: SubclassDefinition?,
     val background: BackgroundDefinition,
     val starterWeapon: WeaponDefinition?,
     val starterArmour: ArmourDefinition?,
+    val starterPack: EquipmentPackDefinition?,
+    val spellFocus: EquipmentDefinition?,
     val hasShield: Boolean,
     val starterSpells: List<SpellDefinition>,
     val racialSpells: List<SpellDefinition>,
+    val subclassSpells: List<SpellDefinition>,
     val spellSlotsSummary: String,
     val summaryLines: List<String>
 )
@@ -46,6 +53,14 @@ class FullSetupEngine @Inject constructor(
             "Unknown background: ${config.backgroundId}"
         }
         val level = config.level.coerceIn(1, 20)
+        val subclassSelection = CharacterSubclassRules.resolve(
+            characterClass = clazz,
+            level = level,
+            requestedSubclassId = config.subclassId,
+            selectedChoiceIds = config.selectedSubclassChoiceIds,
+            subclasses = compendiumService.getSubclasses(),
+            spells = compendiumService.getSpells()
+        )
         val raceSelection = CharacterRaceRules.resolve(
             race = race,
             requestedVariantId = config.raceVariantId,
@@ -65,10 +80,18 @@ class FullSetupEngine @Inject constructor(
             config = config,
             clazz = clazz,
             background = background,
-            racialSkillIds = raceSelection.allRacialSkillIds
+            racialSkillIds = (
+                raceSelection.allRacialSkillIds +
+                    subclassSelection.skillProficiencyIds
+                ).distinct()
         )
         validateGear(config, clazz)
-        validateSpellSelection(config, clazz, level)
+        validateSpellSelection(
+            config,
+            clazz,
+            level,
+            subclassSelection.expandedSpellIds
+        )
         validateBackgroundChoices(config, background)
 
         val starterWeapon = config.starterWeaponId?.let { weaponId ->
@@ -81,6 +104,16 @@ class FullSetupEngine @Inject constructor(
                 "Unknown starter armour: $armourId"
             }
         }
+        val starterPack = config.starterPackId?.let { packId ->
+            requireNotNull(compendiumService.getEquipmentPackById(packId)) {
+                "Unknown starter equipment pack: $packId"
+            }
+        }
+        val spellFocus = clazz.defaultSpellFocusId?.let { focusId ->
+            requireNotNull(compendiumService.getEquipmentById(focusId)) {
+                "Unknown spell focus: $focusId"
+            }
+        }
         val starterSpells = config.starterSpellIds.map { spellId ->
             requireNotNull(compendiumService.getSpellById(spellId)) {
                 "Unknown starter spell: $spellId"
@@ -91,9 +124,15 @@ class FullSetupEngine @Inject constructor(
                 "Unknown racial spell: $spellId"
             }
         }
-        val allKnownSpells = (starterSpells + racialSpells).distinctBy { it.id }
+        val subclassSpells = subclassSelection.alwaysPreparedSpellIds.map { spellId ->
+            requireNotNull(compendiumService.getSpellById(spellId)) {
+                "Unknown subclass spell: $spellId"
+            }
+        }
+        val allKnownSpells = (starterSpells + racialSpells + subclassSpells)
+            .distinctBy { it.id }
 
-        val finalScores = AbilityScoreRules.applyRaceBonuses(
+        val racialScores = AbilityScoreRules.applyRaceBonuses(
             baseScores = mapOf(
                 AbilityType.STRENGTH to config.strength,
                 AbilityType.DEXTERITY to config.dexterity,
@@ -109,6 +148,20 @@ class FullSetupEngine @Inject constructor(
                 AbilityType.valueOf(it)
             }
         )
+        CharacterAdvancementRules.validateSelections(
+            selections = config.advancementSelections,
+            characterClass = clazz,
+            raceVariant = raceSelection.variant,
+            level = level,
+            baseScores = racialScores,
+            feats = compendiumService.getFeats(),
+            racialArmourProficiencies = raceSelection.armourProficiencyIds
+        )
+        val finalScores = CharacterAdvancementRules.applyToScores(
+            baseScores = racialScores,
+            selections = config.advancementSelections,
+            feats = compendiumService.getFeats()
+        )
 
         val inventory = StarterInventoryFactory.build(
             characterClass = clazz,
@@ -117,7 +170,9 @@ class FullSetupEngine @Inject constructor(
             starterArmour = starterArmour,
             hasShield = config.hasShield,
             starterSpells = allKnownSpells,
-            strengthScore = finalScores.getValue(AbilityType.STRENGTH)
+            strengthScore = finalScores.getValue(AbilityType.STRENGTH),
+            starterPack = starterPack,
+            spellFocus = spellFocus
         )
 
         val personalityTraits = config.personalityTraits.ifEmpty {
@@ -129,12 +184,14 @@ class FullSetupEngine @Inject constructor(
         val selectedSkills = (
             background.skillProficiencyIds +
                 raceSelection.allRacialSkillIds +
+                subclassSelection.skillProficiencyIds +
                 config.selectedProficiencyIds
             ).distinct()
 
-        val character = CharacterModel(
+        val characterDraft = CharacterModel(
             name = config.name.trim(),
             characterClass = clazz.id,
+            subclass = subclassSelection.subclass?.id.orEmpty(),
             race = race.id,
             raceVariant = raceSelection.variant?.id.orEmpty(),
             background = background.id,
@@ -178,7 +235,19 @@ class FullSetupEngine @Inject constructor(
             bond = bond,
             flaw = flaw,
             knownSpellIds = allKnownSpells.map { it.id },
-            preparedSpellIds = starterSpells.map { it.id }
+            preparedSpellIds = emptyList(),
+            subclassSpellIds = subclassSelection.alwaysPreparedSpellIds,
+            subclassSkillProficiencyIds = subclassSelection.skillProficiencyIds,
+            selectedSubclassChoiceIds = subclassSelection.selectedChoiceIds,
+            advancementSelections = config.advancementSelections
+        )
+        val character = characterDraft.copy(
+            preparedSpellIds = SpellRules.initialPreparedSpellIds(
+                character = characterDraft,
+                characterClass = clazz,
+                spells = starterSpells,
+                alwaysPreparedSpellIds = subclassSelection.alwaysPreparedSpellIds
+            )
         )
 
         val derived = CharacterStatEngine.build(character)
@@ -189,7 +258,32 @@ class FullSetupEngine @Inject constructor(
             add("Race: ${race.name}")
             raceSelection.variant?.let { add("Ancestry: ${it.name}") }
             add("Class: ${clazz.name}")
+            subclassSelection.subclass?.let { add("Subclass: ${it.name}") }
+            if (subclassSelection.selectedChoiceIds.isNotEmpty()) {
+                add(
+                    "Subclass Choices: ${
+                        CharacterSubclassRules.choiceDisplayNames(character).joinToString()
+                    }"
+                )
+            }
             add("Background: ${background.name}")
+            if (character.advancementSelections.isNotEmpty()) {
+                add(
+                    "Advancement: ${
+                        character.advancementSelections.joinToString { selection ->
+                            if (selection.isFeat) {
+                                compendiumService.getFeatById(selection.featId)?.name
+                                    ?: selection.featId
+                            } else {
+                                selection.abilityIncreases.entries.joinToString(
+                                    prefix = "ASI ",
+                                    separator = "/"
+                                ) { (ability, amount) -> "$ability +$amount" }
+                            }
+                        }
+                    }"
+                )
+            }
             add(
                 "Final Stats: STR ${character.strength}, DEX ${character.dexterity}, " +
                     "CON ${character.constitution}, INT ${character.intelligence}, " +
@@ -215,6 +309,8 @@ class FullSetupEngine @Inject constructor(
             add("Starting Gold: ${character.goldPieces} gp")
             add("Starter Weapon: ${starterWeapon?.name ?: "None"}")
             add("Starter Armour: ${starterArmour?.name ?: "None"}")
+            add("Equipment Pack: ${starterPack?.name ?: "None"}")
+            add("Spell Focus: ${spellFocus?.name ?: "None"}")
             add("Shield: ${if (config.hasShield) "Yes" else "No"}")
             add("HP Max: ${derived.maxHp}")
             add("AC: ${derived.armourClass}")
@@ -233,6 +329,9 @@ class FullSetupEngine @Inject constructor(
             if (racialSpells.isNotEmpty()) {
                 add("Racial Spells: ${racialSpells.joinToString { it.name }}")
             }
+            if (subclassSpells.isNotEmpty()) {
+                add("Subclass Spells: ${subclassSpells.joinToString { it.name }}")
+            }
             if (derived.spellcastingAbilityLabel != null) {
                 add("Spell Attack: ${formatSigned(derived.spellAttackBonus)}")
                 add("Spell Save DC: ${derived.spellSaveDc}")
@@ -247,20 +346,25 @@ class FullSetupEngine @Inject constructor(
             add("Flaw: ${character.flaw}")
         }
 
+        val playableCharacter = CharacterSessionRules.initialise(
+            character.copy(notes = summaryLines.joinToString("\n"))
+        )
+
         return FullSetupResult(
-            character = character.copy(
-                currentHp = derived.maxHp,
-                notes = summaryLines.joinToString("\n")
-            ),
+            character = playableCharacter,
             race = race,
             raceVariant = raceSelection.variant,
             characterClass = clazz,
+            subclass = subclassSelection.subclass,
             background = background,
             starterWeapon = starterWeapon,
             starterArmour = starterArmour,
+            starterPack = starterPack,
+            spellFocus = spellFocus,
             hasShield = config.hasShield,
             starterSpells = starterSpells,
             racialSpells = racialSpells,
+            subclassSpells = subclassSpells,
             spellSlotsSummary = spellSlotsSummary,
             summaryLines = summaryLines
         )
@@ -340,6 +444,9 @@ class FullSetupEngine @Inject constructor(
         require(config.starterArmourId == null || config.starterArmourId in clazz.starterArmourIds) {
             "Selected armour is not a ${clazz.name} starter option"
         }
+        require(config.starterPackId == null || config.starterPackId in clazz.starterPackIds) {
+            "Selected equipment pack is not a ${clazz.name} starter option"
+        }
         require(!config.hasShield || ArmourType.SHIELD in clazz.armourProficiencies) {
             "${clazz.name} is not proficient with shields"
         }
@@ -348,7 +455,8 @@ class FullSetupEngine @Inject constructor(
     private fun validateSpellSelection(
         config: FullSetupConfig,
         clazz: ClassDefinition,
-        level: Int
+        level: Int,
+        expandedSubclassSpellIds: List<String>
     ) {
         if (!clazz.canCastAt(level)) {
             require(config.starterSpellIds.isEmpty()) {
@@ -361,8 +469,24 @@ class FullSetupEngine @Inject constructor(
         require(spells.size == config.starterSpellIds.size) {
             "One or more selected spells do not exist"
         }
-        require(spells.all { clazz.id in it.classIds }) {
-            "One or more selected spells are not available to ${clazz.name}"
+        require(spells.map(SpellDefinition::id).distinct().size == spells.size) {
+            "A spell cannot be selected twice"
+        }
+        val availableSpellIds = SpellRules.availableSpells(
+            characterClass = clazz,
+            characterLevel = level,
+            spells = compendiumService.getSpells()
+        ).mapTo(mutableSetOf(), SpellDefinition::id)
+        availableSpellIds += expandedSubclassSpellIds
+        require(spells.all { it.id in availableSpellIds }) {
+            "One or more selected spells are not available to ${clazz.name} at level $level"
+        }
+        val limits = SpellRules.startingLimits(clazz)
+        require(spells.count(SpellDefinition::isCantrip) <= limits.cantrips) {
+            "${clazz.name} can choose ${limits.cantrips} starting cantrips"
+        }
+        require(spells.count { !it.isCantrip } <= limits.levelledSpells) {
+            "${clazz.name} can choose ${limits.levelledSpells} starting levelled spells"
         }
     }
 

@@ -1,7 +1,9 @@
 package ie.setu.questledger.data.rules
 
 import ie.setu.questledger.data.compendium.AbilityType
+import ie.setu.questledger.data.compendium.ArmourType
 import ie.setu.questledger.data.compendium.SeedCompendiumData
+import ie.setu.questledger.data.compendium.WeaponCategory
 import ie.setu.questledger.models.characters.CharacterModel
 import ie.setu.questledger.models.inventory.InventoryItemModel
 import kotlin.math.floor
@@ -13,6 +15,12 @@ object CharacterStatEngine {
         val equippedWeapon = InventoryEngine.findEquippedWeapon(inventory)
         val equippedArmour = InventoryEngine.findEquippedArmour(inventory)
         val equippedOffhand = InventoryEngine.findEquippedOffhand(inventory)
+        val equippedWeaponDefinition = SeedCompendiumData.weapons.firstOrNull {
+            it.id == equippedWeapon?.catalogueId || it.id == equippedWeapon?.id
+        }
+        val equippedArmourDefinition = SeedCompendiumData.armour.firstOrNull {
+            it.id == equippedArmour?.catalogueId || it.id == equippedArmour?.id
+        }
         val clazz = SeedCompendiumData.classes.firstOrNull {
             it.id.equals(character.characterClass, ignoreCase = true)
         }
@@ -23,10 +31,16 @@ object CharacterStatEngine {
             it.id.equals(character.raceVariant, ignoreCase = true) &&
                 it.raceId.equals(character.race, ignoreCase = true)
         }
+        val subclass = CharacterSubclassRules.effectiveSubclass(character)
+        val advancementEffects = CharacterAdvancementRules.passiveEffects(
+            selections = character.advancementSelections,
+            feats = SeedCompendiumData.feats
+        )
 
         val progression = CharacterProgressionRules.build(
             classId = character.characterClass,
-            level = character.level
+            level = character.level,
+            subclassId = subclass?.id.orEmpty()
         )
 
         val modifiers = mapOf(
@@ -48,8 +62,10 @@ object CharacterStatEngine {
             level = character.level,
             hitDie = progression.hitDie,
             conMod = conMod,
-            racialHitPointsPerLevelBonus = raceVariant?.hitPointsPerLevelBonus ?: 0
-        )
+            racialHitPointsPerLevelBonus =
+                (raceVariant?.hitPointsPerLevelBonus ?: 0) +
+                    (subclass?.hitPointsPerLevelBonus ?: 0)
+        ) + (character.level.coerceAtLeast(1) * advancementEffects.hitPointsPerLevelBonus)
 
         val shieldBonus = if (inventory.items.isEmpty()) {
             character.shieldBonus
@@ -62,18 +78,69 @@ object CharacterStatEngine {
             inventoryHasItems = inventory.items.isNotEmpty(),
             dexMod = dexMod,
             unarmouredDefenseMod = clazz?.unarmouredDefenseAbility?.let(modifiers::get),
+            unarmouredBaseAc = subclass?.unarmouredBaseAc,
             shieldBonus = shieldBonus
         )
 
         val weaponAttackBonus = equippedWeapon?.attackBonus ?: 0
-        val meleeAttackBonus = progression.proficiencyBonus + strMod + weaponAttackBonus
-        val rangedAttackBonus = progression.proficiencyBonus + dexMod + weaponAttackBonus
+        val isWeaponProficient = when {
+            equippedWeaponDefinition == null -> true
+            equippedWeaponDefinition.id in character.racialWeaponProficiencyIds -> true
+            clazz == null -> false
+            equippedWeaponDefinition.weaponCategory == WeaponCategory.SIMPLE &&
+                "Simple Weapons" in clazz.weaponProficiencies -> true
+            equippedWeaponDefinition.weaponCategory == WeaponCategory.MARTIAL &&
+                "Martial Weapons" in clazz.weaponProficiencies -> true
+            else -> clazz.weaponProficiencies.any { proficiency ->
+                val normalized = proficiency
+                    .lowercase()
+                    .replace(Regex("[^a-z]"), "")
+                    .removeSuffix("s")
+                val weaponName = equippedWeaponDefinition.name
+                    .lowercase()
+                    .replace(Regex("[^a-z]"), "")
+                    .removeSuffix("s")
+                normalized == weaponName
+            }
+        }
+        val weaponProficiencyBonus = if (isWeaponProficient) {
+            progression.proficiencyBonus
+        } else {
+            0
+        }
+        val finesseMeleeModifier = if (
+            equippedWeaponDefinition?.propertyTags?.contains("Finesse") == true
+        ) {
+            maxOf(strMod, dexMod)
+        } else {
+            strMod
+        }
+        val meleeAttackBonus =
+            weaponProficiencyBonus + finesseMeleeModifier + weaponAttackBonus
+        val rangedAttackBonus =
+            weaponProficiencyBonus + dexMod + weaponAttackBonus
 
         val castingAbility = clazz
             ?.takeIf { it.canCastAt(character.level) }
             ?.spellcastingAbility
         val spellcastingMod = castingAbility?.let(modifiers::get)
-        val spellcastingBlocked = equippedArmour?.spellcastingBlocked == true
+        val isArmourProficient = when {
+            equippedArmourDefinition == null -> true
+            equippedArmourDefinition.armourType in clazz?.armourProficiencies.orEmpty() -> true
+            equippedArmourDefinition.armourType in
+                subclass?.armourProficiencies.orEmpty() -> true
+            equippedArmourDefinition.armourType == ArmourType.LIGHT &&
+                character.racialArmourProficiencyIds.any {
+                    it.equals("Light armour", ignoreCase = true)
+                } -> true
+            equippedArmourDefinition.armourType == ArmourType.MEDIUM &&
+                character.racialArmourProficiencyIds.any {
+                    it.equals("Medium armour", ignoreCase = true)
+                } -> true
+            else -> false
+        }
+        val spellcastingBlocked =
+            equippedArmour?.spellcastingBlocked == true || !isArmourProficient
         val canCast = spellcastingMod != null && !spellcastingBlocked
         val spellAttackBonus = if (canCast) {
             progression.proficiencyBonus + requireNotNull(spellcastingMod)
@@ -84,6 +151,11 @@ object CharacterStatEngine {
             8 + progression.proficiencyBonus + requireNotNull(spellcastingMod)
         } else {
             0
+        }
+        val armourMovementPenalty = when {
+            equippedArmour?.minimumStrength != null &&
+                character.strength < equippedArmour.minimumStrength -> 10
+            else -> equippedArmour?.movementPenalty ?: 0
         }
 
         return CharacterDerivedStats(
@@ -106,13 +178,14 @@ object CharacterStatEngine {
             rangedAttackBonus = rangedAttackBonus,
             spellAttackBonus = spellAttackBonus,
             spellSaveDc = spellSaveDc,
-            initiativeBonus = dexMod,
-            passivePerception = 10 + wisMod,
+            initiativeBonus = dexMod + advancementEffects.initiativeBonus,
+            passivePerception = 10 + wisMod + advancementEffects.passivePerceptionBonus,
             carryCapacity = (character.strength * 15).coerceAtLeast(0),
             inventoryCapacity = inventory.capacitySlots,
             speed = (
                 (raceVariant?.speedOverride ?: race?.speed ?: 30) -
-                    (equippedArmour?.movementPenalty ?: 0)
+                    armourMovementPenalty +
+                    advancementEffects.speedBonus
                 ).coerceAtLeast(0),
             hitDie = progression.hitDie,
             weaponName = equippedWeapon?.name,
@@ -151,6 +224,7 @@ object CharacterStatEngine {
         inventoryHasItems: Boolean,
         dexMod: Int,
         unarmouredDefenseMod: Int?,
+        unarmouredBaseAc: Int?,
         shieldBonus: Int
     ): Int {
         val baseWithDex = when {
@@ -165,7 +239,10 @@ object CharacterStatEngine {
 
             equippedArmour != null -> 10 + equippedArmour.armourBonus + dexMod
             !inventoryHasItems && legacyArmourBonus != 0 -> 10 + legacyArmourBonus + dexMod
-            else -> 10 + dexMod + (unarmouredDefenseMod ?: 0)
+            else -> maxOf(
+                10 + dexMod + (unarmouredDefenseMod ?: 0),
+                (unarmouredBaseAc ?: 10) + dexMod
+            )
         }
         return baseWithDex + shieldBonus
     }

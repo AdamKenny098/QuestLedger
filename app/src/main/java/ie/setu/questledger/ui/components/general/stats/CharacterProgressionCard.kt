@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.rules.CharacterSessionRules
 import ie.setu.questledger.models.characters.CharacterModel
 
 @Composable
@@ -19,7 +20,8 @@ fun CharacterProgressionCard(
     character: CharacterModel,
     modifier: Modifier = Modifier
 ) {
-    val derived = CharacterStatEngine.build(character)
+    val playableCharacter = CharacterSessionRules.normalise(character)
+    val derived = CharacterStatEngine.build(playableCharacter)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -45,7 +47,9 @@ fun CharacterProgressionCard(
                 "None"
             } else {
                 derived.spellSlotsByLevel.mapIndexed { index, count ->
-                    "L${index + 1} x$count"
+                    val remaining = playableCharacter.remainingSpellSlotsByLevel
+                        .getOrElse(index) { count }
+                    "L${index + 1} $remaining/$count"
                 }.joinToString(", ")
             }
 

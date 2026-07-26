@@ -36,6 +36,7 @@ object SeedPremadeTemplates {
             defaultName = "Brom",
             raceId = "dwarf",
             classId = "cleric",
+            subclassId = "life_domain",
             level = 1,
             backgroundId = "acolyte",
             raceVariantId = "hill_dwarf"

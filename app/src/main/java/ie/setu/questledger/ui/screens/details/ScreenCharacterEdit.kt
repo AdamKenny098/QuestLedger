@@ -26,13 +26,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import ie.setu.questledger.data.compendium.CompendiumLookup
 import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.rules.CharacterAdvancementRules
 import ie.setu.questledger.models.characters.CharacterModel
+import ie.setu.questledger.models.characters.CharacterAdvancementSelection
 import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.ShowPhotoPicker
 import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentEditorCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryEditorCard
 import ie.setu.questledger.ui.components.general.stats.AbilityScoreField
+import ie.setu.questledger.ui.components.general.advancement.CharacterAdvancementEditorCard
 
 @Composable
 fun ScreenCharacterEdit(
@@ -45,10 +48,22 @@ fun ScreenCharacterEdit(
     val races = remember { vm.getRaces() }
     val classes = remember { vm.getClasses() }
     val backgrounds = remember { vm.getBackgrounds() }
+    val feats = remember { vm.getFeats() }
 
     var name by remember(c.id) { mutableStateOf(c.name) }
     var selectedClassId by remember(c.id) {
         mutableStateOf(CompendiumLookup.findClass(c.characterClass)?.id ?: c.characterClass)
+    }
+    var selectedSubclassId by remember(c.id) {
+        mutableStateOf(
+            CompendiumLookup.findSubclass(c.subclass)?.id
+                ?: c.subclass
+        )
+    }
+    val selectedSubclassChoiceIds = remember(c.id) {
+        mutableStateListOf<String>().apply {
+            addAll(c.selectedSubclassChoiceIds)
+        }
     }
     var selectedRaceId by remember(c.id) {
         mutableStateOf(CompendiumLookup.findRace(c.race)?.id ?: c.race)
@@ -84,6 +99,9 @@ fun ScreenCharacterEdit(
         )
     }
     var levelText by remember(c.id) { mutableStateOf(c.level.toString()) }
+    var advancementSelections by remember(c.id) {
+        mutableStateOf(c.advancementSelections)
+    }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedImageUri by remember(c.id) { mutableStateOf<Uri?>(null) }
 
@@ -121,6 +139,23 @@ fun ScreenCharacterEdit(
     val selectedClass = remember(selectedClassId) {
         classes.firstOrNull { it.id == selectedClassId }
     }
+    val classSubclasses = remember(selectedClassId) {
+        vm.getSubclassesForClass(selectedClassId)
+    }
+    val availableSubclasses = remember(selectedClassId, levelText) {
+        val level = levelText.toIntOrNull()?.coerceIn(1, 20) ?: 1
+        vm.getSubclassesForClass(selectedClassId)
+            .filter { it.selectionLevel <= level }
+    }
+    val selectedSubclass = remember(selectedSubclassId, availableSubclasses) {
+        availableSubclasses.firstOrNull { it.id == selectedSubclassId }
+    }
+    val subclassChoiceGroups = remember(selectedSubclassId, levelText) {
+        vm.getSubclassChoiceGroups(
+            subclassId = selectedSubclassId,
+            level = levelText.toIntOrNull()?.coerceIn(1, 20) ?: 1
+        )
+    }
 
     val selectedBackground = remember(selectedBackgroundId) {
         backgrounds.firstOrNull { it.id == selectedBackgroundId }
@@ -128,8 +163,8 @@ fun ScreenCharacterEdit(
     val flexibleAbilityChoices = remember(selectedRaceId, selectedRaceVariantId) {
         vm.getFlexibleAbilityChoices(selectedRaceId, selectedRaceVariantId)
     }
-    val flexibleAbilityChoiceCount = remember(selectedRaceId) {
-        vm.getFlexibleAbilityChoiceCount(selectedRaceId)
+    val flexibleAbilityChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getFlexibleAbilityChoiceCount(selectedRaceId, selectedRaceVariantId)
     }
     val racialSkillChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
         vm.getRacialSkillChoiceCount(selectedRaceId, selectedRaceVariantId)
@@ -158,6 +193,88 @@ fun ScreenCharacterEdit(
     }
     val racialCantripOptions = remember(selectedRaceVariantId) {
         vm.getRacialCantripOptions(selectedRaceVariantId)
+    }
+
+    LaunchedEffect(
+        c.id,
+        selectedClassId,
+        selectedRaceVariantId,
+        levelText,
+        strengthText,
+        dexterityText,
+        constitutionText,
+        intelligenceText,
+        wisdomText,
+        charismaText
+    ) {
+        val clazz = selectedClass ?: return@LaunchedEffect
+        val currentLevel = levelText.toIntOrNull()?.coerceIn(1, 20) ?: 1
+        val scores = mapOf(
+            ie.setu.questledger.data.compendium.AbilityType.STRENGTH to
+                (strengthText.toIntOrNull() ?: 10),
+            ie.setu.questledger.data.compendium.AbilityType.DEXTERITY to
+                (dexterityText.toIntOrNull() ?: 10),
+            ie.setu.questledger.data.compendium.AbilityType.CONSTITUTION to
+                (constitutionText.toIntOrNull() ?: 10),
+            ie.setu.questledger.data.compendium.AbilityType.INTELLIGENCE to
+                (intelligenceText.toIntOrNull() ?: 10),
+            ie.setu.questledger.data.compendium.AbilityType.WISDOM to
+                (wisdomText.toIntOrNull() ?: 10),
+            ie.setu.questledger.data.compendium.AbilityType.CHARISMA to
+                (charismaText.toIntOrNull() ?: 10)
+        )
+        val defaults = CharacterAdvancementRules.defaultSelections(
+            characterClass = clazz,
+            level = currentLevel,
+            baseScores = scores,
+            feats = feats,
+            raceVariant = selectedRaceVariant
+        )
+        val currentBySlot = advancementSelections.associateBy {
+            it.source to it.level
+        }
+        val normalized = defaults.map { default ->
+            currentBySlot[default.source to default.level] ?: default
+        }
+        if (normalized != advancementSelections) {
+            advancementSelections = normalized
+        }
+    }
+
+    LaunchedEffect(
+        c.id,
+        selectedClassId,
+        levelText,
+        selectedSubclassId
+    ) {
+        if (availableSubclasses.isEmpty()) {
+            selectedSubclassId = ""
+            selectedSubclassChoiceIds.clear()
+            return@LaunchedEffect
+        }
+        val validSubclass = availableSubclasses.firstOrNull {
+            it.id == selectedSubclassId
+        }
+        if (validSubclass == null) {
+            selectedSubclassId = availableSubclasses.first().id
+            return@LaunchedEffect
+        }
+        val currentLevel = levelText.toIntOrNull()?.coerceIn(1, 20) ?: 1
+        val normalisedChoices = validSubclass.choiceGroups
+            .filter { it.minimumLevel <= currentLevel }
+            .flatMap { group ->
+                val optionIds = group.options.map { it.id }
+                (
+                    selectedSubclassChoiceIds.filter { it in optionIds } +
+                        optionIds
+                    )
+                    .distinct()
+                    .take(group.selectionCount)
+            }
+        if (normalisedChoices != selectedSubclassChoiceIds.toList()) {
+            selectedSubclassChoiceIds.clear()
+            selectedSubclassChoiceIds.addAll(normalisedChoices)
+        }
     }
 
     LaunchedEffect(
@@ -233,6 +350,7 @@ fun ScreenCharacterEdit(
         email = c.email,
         name = name,
         characterClass = selectedClassId,
+        subclass = selectedSubclassId,
         race = selectedRaceId,
         raceVariant = selectedRaceVariantId,
         background = selectedBackgroundId,
@@ -275,7 +393,12 @@ fun ScreenCharacterEdit(
         bond = vm.character.value.bond,
         flaw = vm.character.value.flaw,
         knownSpellIds = vm.character.value.knownSpellIds,
-        preparedSpellIds = vm.character.value.preparedSpellIds
+        preparedSpellIds = vm.character.value.preparedSpellIds,
+        subclassSpellIds = vm.character.value.subclassSpellIds,
+        subclassSkillProficiencyIds =
+            vm.character.value.subclassSkillProficiencyIds,
+        selectedSubclassChoiceIds = selectedSubclassChoiceIds.toList(),
+        advancementSelections = advancementSelections
     )
 
     val isSpellcaster = CharacterStatEngine.build(previewCharacter).spellcastingAbilityLabel != null
@@ -557,6 +680,72 @@ fun ScreenCharacterEdit(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            if (availableSubclasses.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                CompendiumDropdown(
+                    label = "Subclass",
+                    options = availableSubclasses.map {
+                        CompendiumOption(it.id, it.name)
+                    },
+                    selectedId = selectedSubclassId,
+                    onSelected = {
+                        selectedSubclassId = it
+                        selectedSubclassChoiceIds.clear()
+                    }
+                )
+                selectedSubclass?.let { subclass ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        subclass.description,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                subclassChoiceGroups.forEach { group ->
+                    repeat(group.selectionCount) { index ->
+                        val optionIds = group.options.map { it.id }.toSet()
+                        val selectedForGroup =
+                            selectedSubclassChoiceIds.filter { it in optionIds }
+                        val selectedId =
+                            selectedForGroup.getOrNull(index).orEmpty()
+                        val blocked = selectedForGroup
+                            .filterIndexed { otherIndex, _ -> otherIndex != index }
+                            .toSet()
+                        Spacer(Modifier.height(8.dp))
+                        CompendiumDropdown(
+                            label = if (group.selectionCount == 1) {
+                                group.name
+                            } else {
+                                "${group.name} ${index + 1}"
+                            },
+                            options = group.options
+                                .filterNot { it.id in blocked }
+                                .map { CompendiumOption(it.id, it.name) },
+                            selectedId = selectedId,
+                            onSelected = { optionId ->
+                                val oldId = selectedForGroup.getOrNull(index)
+                                if (oldId != null) {
+                                    val listIndex =
+                                        selectedSubclassChoiceIds.indexOf(oldId)
+                                    selectedSubclassChoiceIds[listIndex] = optionId
+                                } else {
+                                    selectedSubclassChoiceIds.add(optionId)
+                                }
+                            }
+                        )
+                    }
+                }
+            } else {
+                classSubclasses.firstOrNull()?.let { subclass ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "${subclass.name} unlocks at level " +
+                            "${subclass.selectionLevel}.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
             Spacer(Modifier.height(12.dp))
 
             Text("Ability Scores", style = MaterialTheme.typography.titleMedium)
@@ -576,6 +765,22 @@ fun ScreenCharacterEdit(
 
             Spacer(Modifier.height(16.dp))
 
+            CharacterAdvancementEditorCard(
+                classId = selectedClassId,
+                level = levelText.toIntOrNull() ?: 1,
+                raceVariant = selectedRaceVariant,
+                selections = advancementSelections,
+                feats = feats,
+                defaultAbilityId = selectedClass
+                    ?.quickBuildAbilityPriority
+                    ?.firstOrNull()
+                    ?.name
+                    ?: "STRENGTH",
+                onSelectionsChanged = { advancementSelections = it }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
             CharacterEquipmentEditorCard(
                 inventory = vm.character.value.inventory,
                 onEquipItem = vm::equipItem,
@@ -588,11 +793,14 @@ fun ScreenCharacterEdit(
             Spacer(Modifier.height(12.dp))
 
             CharacterInventoryEditorCard(
-                inventory = vm.character.value.inventory,
+                character = vm.character.value,
+                catalogueItems = remember { vm.getEquipmentCatalogue() },
+                equipmentPacks = remember { vm.getEquipmentPacks() },
                 onRemoveItem = vm::removeItem,
-                onAddTestPotion = vm::addTestPotion,
-                onAddTestTool = vm::addTestTool,
-                onAddTestShield = vm::addTestShield
+                onChangeQuantity = vm::changeItemQuantity,
+                onAddCatalogueItem = vm::addCatalogueItem,
+                onAddEquipmentPack = vm::addEquipmentPack,
+                onAdjustCurrency = vm::adjustCurrency
             )
 
             Spacer(Modifier.height(12.dp))
@@ -665,6 +873,9 @@ fun ScreenCharacterEdit(
                             error = "Choose a racial cantrip"
                         selectedBackgroundId.isBlank() -> error = "Background is required"
                         level == null || level !in 1..20 -> error = "Level must be 1–20"
+                        availableSubclasses.isNotEmpty() &&
+                            selectedSubclassId.isBlank() ->
+                            error = "Subclass is required at this level"
                         listOf(str, dex, con, intScore, wis, cha).any { it == null || it !in 1..20 } ->
                             error = "All ability scores must be between 1 and 20"
                         else -> {
@@ -672,6 +883,7 @@ fun ScreenCharacterEdit(
                             vm.updateCharacter(
                                 name = name.trim(),
                                 characterClass = selectedClassId.trim(),
+                                subclass = selectedSubclassId.trim(),
                                 race = selectedRaceId.trim(),
                                 raceVariant = selectedRaceVariantId.trim(),
                                 background = selectedBackgroundId.trim(),
@@ -690,6 +902,9 @@ fun ScreenCharacterEdit(
                                 selectedRacialLanguageIds =
                                     selectedRacialLanguageIds.toList(),
                                 selectedRacialSpellId = selectedRacialSpellId,
+                                selectedSubclassChoiceIds =
+                                    selectedSubclassChoiceIds.toList(),
+                                advancementSelections = advancementSelections,
                                 imageUri = selectedImageUri,
                                 onSuccess = onDone
                             )

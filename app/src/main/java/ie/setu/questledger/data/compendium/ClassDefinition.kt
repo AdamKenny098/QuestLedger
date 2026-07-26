@@ -23,7 +23,13 @@ data class ClassDefinition(
     val starterSpellIds: List<String>,
     val spellSlotProgression: Map<Int, List<Int>>,
     val classFeaturesByLevel: Map<Int, List<String>>,
-    val unarmouredDefenseAbility: AbilityType? = null
+    val unarmouredDefenseAbility: AbilityType? = null,
+    val spellLearningMode: SpellLearningMode = SpellLearningMode.NONE,
+    val startingCantripCount: Int = 0,
+    val startingSpellCount: Int = 0,
+    val starterPackIds: List<String> = emptyList(),
+    val defaultPackId: String? = null,
+    val defaultSpellFocusId: String? = null
 ) {
     val isSpellcaster: Boolean
         get() = spellcastingAbility != null && spellcastingStartLevel != null

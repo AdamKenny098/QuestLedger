@@ -1,9 +1,12 @@
 package ie.setu.questledger.models
 
+import ie.setu.questledger.models.characters.CharacterAdvancementSelection
+
 data class FullSetupConfig(
     val name: String,
     val raceId: String,
     val classId: String,
+    val subclassId: String = "",
     val level: Int,
     val strength: Int,
     val dexterity: Int,
@@ -25,5 +28,8 @@ data class FullSetupConfig(
     val selectedFlexibleAbilityIds: List<String> = emptyList(),
     val selectedRacialSkillIds: List<String> = emptyList(),
     val selectedRacialLanguageIds: List<String> = emptyList(),
-    val selectedRacialSpellId: String = ""
+    val selectedRacialSpellId: String = "",
+    val starterPackId: String? = null,
+    val selectedSubclassChoiceIds: List<String> = emptyList(),
+    val advancementSelections: List<CharacterAdvancementSelection> = emptyList()
 )

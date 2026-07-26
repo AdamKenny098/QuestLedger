@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.rules.CharacterSessionRules
 import ie.setu.questledger.models.characters.CharacterModel
 
 @Composable
@@ -21,7 +22,8 @@ fun CharacterDerivedStatsCard(
     character: CharacterModel,
     modifier: Modifier = Modifier
 ) {
-    val derived = CharacterStatEngine.build(character)
+    val playableCharacter = CharacterSessionRules.normalise(character)
+    val derived = CharacterStatEngine.build(playableCharacter)
 
     fun fmt(value: Int): String = if (value >= 0) "+$value" else "$value"
 
@@ -62,7 +64,14 @@ fun CharacterDerivedStatsCard(
 
             Spacer(Modifier.height(12.dp))
 
-            Text("HP Max: ${derived.maxHp}")
+            Text(
+                "HP: ${playableCharacter.currentHp}/${derived.maxHp}" +
+                    if (playableCharacter.temporaryHp > 0) {
+                        " (+${playableCharacter.temporaryHp} temporary)"
+                    } else {
+                        ""
+                    }
+            )
             Text("AC: ${derived.armourClass}")
             Text("Prof Bonus: ${fmt(derived.proficiencyBonus)}")
             Text("Melee Attack: ${fmt(derived.meleeAttackBonus)}")

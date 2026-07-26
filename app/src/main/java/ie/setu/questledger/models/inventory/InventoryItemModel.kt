@@ -1,7 +1,5 @@
 package ie.setu.questledger.models.inventory
 
-import ie.setu.questledger.models.inventory.InventoryItemType
-
 data class InventoryItemModel(
     val id: String = "",
     val name: String = "",
@@ -15,5 +13,14 @@ data class InventoryItemModel(
     val maxDexBonus: Int? = null,
     val shieldBonus: Int = 0,
     val movementPenalty: Int = 0,
-    val spellcastingBlocked: Boolean = false
+    val spellcastingBlocked: Boolean = false,
+    val catalogueId: String = "",
+    val categoryLabel: String = "",
+    val description: String = "",
+    val costCp: Int = 0,
+    val weightLb: Double = 0.0,
+    val stackSize: Int = 1,
+    val properties: List<String> = emptyList(),
+    val minimumStrength: Int? = null,
+    val stealthDisadvantage: Boolean = false
 )

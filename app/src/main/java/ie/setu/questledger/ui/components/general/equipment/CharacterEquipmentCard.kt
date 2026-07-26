@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ie.setu.questledger.data.rules.CurrencyRules
 import ie.setu.questledger.data.rules.InventoryEngine
 import ie.setu.questledger.models.characters.CharacterModel
 
@@ -49,6 +50,10 @@ fun CharacterEquipmentCard(
                 if (equippedWeapon.attackBonus != 0) {
                     Text("Attack Bonus: ${formatSigned(equippedWeapon.attackBonus)}")
                 }
+                if (equippedWeapon.properties.isNotEmpty()) {
+                    Text("Properties: ${equippedWeapon.properties.joinToString()}")
+                }
+                Text(equipmentValueLine(equippedWeapon.costCp, equippedWeapon.weightLb))
             }
 
             Spacer(Modifier.height(8.dp))
@@ -64,6 +69,13 @@ fun CharacterEquipmentCard(
                 if (equippedArmour.spellcastingBlocked) {
                     Text("Spellcasting Restriction: Yes")
                 }
+                equippedArmour.minimumStrength?.let {
+                    Text("Minimum Strength: $it")
+                }
+                if (equippedArmour.stealthDisadvantage) {
+                    Text("Stealth: Disadvantage")
+                }
+                Text(equipmentValueLine(equippedArmour.costCp, equippedArmour.weightLb))
             }
 
             Spacer(Modifier.height(8.dp))
@@ -71,6 +83,9 @@ fun CharacterEquipmentCard(
             Text("Offhand / Shield: ${equippedOffhand?.name ?: "None"}")
             if (equippedOffhand != null && equippedOffhand.shieldBonus != 0) {
                 Text("Shield Bonus: +${equippedOffhand.shieldBonus}")
+            }
+            if (equippedOffhand != null) {
+                Text(equipmentValueLine(equippedOffhand.costCp, equippedOffhand.weightLb))
             }
 
             Spacer(Modifier.height(8.dp))
@@ -82,4 +97,8 @@ fun CharacterEquipmentCard(
 
 private fun formatSigned(value: Int): String {
     return if (value >= 0) "+$value" else value.toString()
+}
+
+private fun equipmentValueLine(costCp: Int, weightLb: Double): String {
+    return "Value: ${CurrencyRules.formatCost(costCp)} • Weight: $weightLb lb."
 }

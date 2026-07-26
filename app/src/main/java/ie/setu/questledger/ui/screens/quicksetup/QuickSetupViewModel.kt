@@ -35,6 +35,9 @@ class QuickSetupViewModel @Inject constructor(
 
     fun getClasses(): List<ClassDefinition> = compendiumService.getClasses()
 
+    fun getSubclassesForClass(classId: String) =
+        compendiumService.getSubclassesForClass(classId)
+
     fun getBackgrounds(): List<BackgroundDefinition> = compendiumService.getBackgrounds()
 
     fun buildPreview(config: QuickSetupConfig): QuickSetupResult? {

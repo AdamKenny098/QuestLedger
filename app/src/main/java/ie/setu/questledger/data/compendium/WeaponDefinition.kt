@@ -8,5 +8,12 @@ data class WeaponDefinition(
     val propertyTags: List<String>,
     val weight: Double,
     val requiredStat: AbilityType,
-    val handedness: Handedness
+    val handedness: Handedness,
+    val costCp: Int = 0,
+    val weaponCategory: WeaponCategory = WeaponCategory.SIMPLE,
+    val rangeType: WeaponRangeType = WeaponRangeType.MELEE,
+    val normalRangeFt: Int? = null,
+    val longRangeFt: Int? = null,
+    val versatileDamageDice: String? = null,
+    val description: String = ""
 )

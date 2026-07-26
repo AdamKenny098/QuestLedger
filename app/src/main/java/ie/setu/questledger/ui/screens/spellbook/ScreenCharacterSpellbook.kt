@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ie.setu.questledger.ui.components.general.spells.CharacterSpellbookCard
 import ie.setu.questledger.ui.components.general.spells.CharacterSpellbookEditorCard
+import ie.setu.questledger.ui.components.general.session.CharacterSpellSlotTrackerCard
 
 @Composable
 fun ScreenCharacterSpellbook(
@@ -30,6 +31,7 @@ fun ScreenCharacterSpellbook(
     val isLoading by vm.isLoading
     val isErr by vm.isErr
     val error by vm.error
+    val isSessionSaving by vm.isSessionSaving
 
     val compendiumService = vm.getCompendiumService()
 
@@ -85,6 +87,15 @@ fun ScreenCharacterSpellbook(
             CharacterSpellbookCard(
                 character = character,
                 compendiumService = compendiumService
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterSpellSlotTrackerCard(
+                character = character,
+                isSaving = isSessionSaving,
+                onUseSpellSlot = vm::useSpellSlot,
+                onRestoreSpellSlot = vm::restoreSpellSlot
             )
 
             Spacer(Modifier.height(12.dp))

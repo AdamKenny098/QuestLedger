@@ -35,6 +35,7 @@ class PremadeCharactersViewModel @Inject constructor(
             name = if (customName.isBlank()) template.defaultName else customName.trim(),
             raceId = template.raceId,
             classId = template.classId,
+            subclassId = template.subclassId,
             level = template.level,
             backgroundId = template.backgroundId,
             raceVariantId = template.raceVariantId
@@ -60,6 +61,7 @@ class PremadeCharactersViewModel @Inject constructor(
                     name = if (customName.isBlank()) template.defaultName else customName.trim(),
                     raceId = template.raceId,
                     classId = template.classId,
+                    subclassId = template.subclassId,
                     level = template.level,
                     backgroundId = template.backgroundId,
                     raceVariantId = template.raceVariantId

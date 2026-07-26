@@ -46,6 +46,7 @@ class RosterViewModel @Inject constructor(
                             c.name.lowercase().contains(term) ||
                             c.race.lowercase().contains(term) ||
                             c.raceVariant.lowercase().contains(term) ||
+                            c.subclass.lowercase().contains(term) ||
                             c.characterClass.lowercase().contains(term)
                 }
 

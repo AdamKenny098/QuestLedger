@@ -5,9 +5,12 @@ import ie.setu.questledger.data.compendium.ArmourDefinition
 import ie.setu.questledger.data.compendium.BackgroundDefinition
 import ie.setu.questledger.data.compendium.ClassDefinition
 import ie.setu.questledger.data.compendium.CompendiumService
+import ie.setu.questledger.data.compendium.EquipmentDefinition
+import ie.setu.questledger.data.compendium.EquipmentPackDefinition
 import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.compendium.RaceVariantDefinition
 import ie.setu.questledger.data.compendium.SpellDefinition
+import ie.setu.questledger.data.compendium.SubclassDefinition
 import ie.setu.questledger.data.compendium.WeaponDefinition
 import ie.setu.questledger.models.QuickSetupConfig
 import ie.setu.questledger.models.characters.CharacterModel
@@ -19,12 +22,16 @@ data class QuickSetupResult(
     val race: RaceDefinition,
     val raceVariant: RaceVariantDefinition?,
     val characterClass: ClassDefinition,
+    val subclass: SubclassDefinition?,
     val background: BackgroundDefinition,
     val starterWeapon: WeaponDefinition?,
     val starterArmour: ArmourDefinition?,
+    val starterPack: EquipmentPackDefinition?,
+    val spellFocus: EquipmentDefinition?,
     val hasShield: Boolean,
     val starterSpells: List<SpellDefinition>,
     val racialSpells: List<SpellDefinition>,
+    val subclassSpells: List<SpellDefinition>,
     val spellSlotsSummary: String,
     val summaryLines: List<String>
 )
@@ -45,6 +52,14 @@ class QuickSetupEngine @Inject constructor(
             "Unknown background: ${config.backgroundId}"
         }
         val level = config.level.coerceIn(1, 20)
+        var subclassSelection = CharacterSubclassRules.resolve(
+            characterClass = clazz,
+            level = level,
+            requestedSubclassId = config.subclassId,
+            selectedChoiceIds = config.selectedSubclassChoiceIds,
+            subclasses = compendiumService.getSubclasses(),
+            spells = compendiumService.getSpells()
+        )
         val raceSelection = CharacterRaceRules.resolve(
             race = race,
             requestedVariantId = config.raceVariantId,
@@ -58,29 +73,94 @@ class QuickSetupEngine @Inject constructor(
             selectedRacialLanguageIds = config.selectedRacialLanguageIds,
             selectedRacialSpellId = config.selectedRacialSpellId
         )
+        if (config.selectedSubclassChoiceIds.isEmpty()) {
+            val excludedSkillIds = (
+                background.skillProficiencyIds +
+                    raceSelection.allRacialSkillIds
+                ).toMutableSet()
+            val automaticChoiceIds = buildList {
+                subclassSelection.subclass
+                    ?.choiceGroups
+                    .orEmpty()
+                    .filter { it.minimumLevel <= level }
+                    .forEach { group ->
+                        group.options
+                            .sortedBy { option ->
+                                option.grantedSkillProficiencyId
+                                    ?.let { it in excludedSkillIds } == true
+                            }
+                            .take(group.selectionCount)
+                            .forEach { option ->
+                                add(option.id)
+                                option.grantedSkillProficiencyId?.let(excludedSkillIds::add)
+                            }
+                    }
+            }
+            if (automaticChoiceIds != subclassSelection.selectedChoiceIds) {
+                subclassSelection = CharacterSubclassRules.resolve(
+                    characterClass = clazz,
+                    level = level,
+                    requestedSubclassId = subclassSelection.subclass?.id.orEmpty(),
+                    selectedChoiceIds = automaticChoiceIds,
+                    subclasses = compendiumService.getSubclasses(),
+                    spells = compendiumService.getSpells()
+                )
+            }
+        }
 
         val baseScores = generateBaseScores(clazz.quickBuildAbilityPriority)
-        val scores = AbilityScoreRules.applyRaceBonuses(
+        val racialScores = AbilityScoreRules.applyRaceBonuses(
             baseScores = baseScores,
             race = race,
             raceVariant = raceSelection.variant,
             classPriority = clazz.quickBuildAbilityPriority,
             selectedFlexibleAbilities = raceSelection.flexibleAbilityIds.map(AbilityType::valueOf)
         )
+        val advancementSelections = CharacterAdvancementRules.defaultSelections(
+            characterClass = clazz,
+            level = level,
+            baseScores = racialScores,
+            feats = compendiumService.getFeats(),
+            raceVariant = raceSelection.variant
+        )
+        CharacterAdvancementRules.validateSelections(
+            selections = advancementSelections,
+            characterClass = clazz,
+            raceVariant = raceSelection.variant,
+            level = level,
+            baseScores = racialScores,
+            feats = compendiumService.getFeats(),
+            racialArmourProficiencies = raceSelection.armourProficiencyIds
+        )
+        val scores = CharacterAdvancementRules.applyToScores(
+            baseScores = racialScores,
+            selections = advancementSelections,
+            feats = compendiumService.getFeats()
+        )
 
         val starterWeapon = clazz.defaultWeaponId?.let(compendiumService::getWeaponById)
         val starterArmour = clazz.defaultArmourId?.let(compendiumService::getArmourById)
+        val starterPack = clazz.defaultPackId?.let(compendiumService::getEquipmentPackById)
+        val spellFocus = clazz.defaultSpellFocusId?.let(compendiumService::getEquipmentById)
         val hasShield = clazz.startsWithShield
+        val availableClassSpellIds = SpellRules.availableSpells(
+            characterClass = clazz,
+            characterLevel = level,
+            spells = compendiumService.getSpells()
+        ).mapTo(mutableSetOf(), SpellDefinition::id)
         val starterSpells = if (clazz.canCastAt(level)) {
             clazz.starterSpellIds
                 .mapNotNull(compendiumService::getSpellById)
-                .filter { clazz.id in it.classIds }
+                .filter { it.id in availableClassSpellIds }
         } else {
             emptyList()
         }
         val racialSpells = raceSelection.racialSpellIds
             .mapNotNull(compendiumService::getSpellById)
-        val allStarterSpells = (starterSpells + racialSpells).distinctBy { it.id }
+        val subclassSpells = subclassSelection.alwaysPreparedSpellIds
+            .mapNotNull(compendiumService::getSpellById)
+        val allStarterSpells = (starterSpells + racialSpells + subclassSpells)
+            .distinctBy { it.id }
 
         val inventory = StarterInventoryFactory.build(
             characterClass = clazz,
@@ -89,21 +169,25 @@ class QuickSetupEngine @Inject constructor(
             starterArmour = starterArmour,
             hasShield = hasShield,
             starterSpells = allStarterSpells,
-            strengthScore = scores.getValue(AbilityType.STRENGTH)
+            strengthScore = scores.getValue(AbilityType.STRENGTH),
+            starterPack = starterPack,
+            spellFocus = spellFocus
         )
 
         val fixedCreationSkills = (
             background.skillProficiencyIds +
-                raceSelection.allRacialSkillIds
+                raceSelection.allRacialSkillIds +
+                subclassSelection.skillProficiencyIds
             ).distinct()
         val classSkills = clazz.skillProficiencies
             .filterNot { it in fixedCreationSkills }
             .take(clazz.skillChoiceCount)
         val selectedSkills = (fixedCreationSkills + classSkills).distinct()
 
-        val character = CharacterModel(
+        val characterDraft = CharacterModel(
             name = config.name.trim(),
             characterClass = clazz.id,
+            subclass = subclassSelection.subclass?.id.orEmpty(),
             race = race.id,
             raceVariant = raceSelection.variant?.id.orEmpty(),
             background = background.id,
@@ -147,7 +231,19 @@ class QuickSetupEngine @Inject constructor(
             bond = background.bonds.first(),
             flaw = background.flaws.first(),
             knownSpellIds = allStarterSpells.map { it.id },
-            preparedSpellIds = starterSpells.map { it.id }
+            preparedSpellIds = emptyList(),
+            subclassSpellIds = subclassSelection.alwaysPreparedSpellIds,
+            subclassSkillProficiencyIds = subclassSelection.skillProficiencyIds,
+            selectedSubclassChoiceIds = subclassSelection.selectedChoiceIds,
+            advancementSelections = advancementSelections
+        )
+        val character = characterDraft.copy(
+            preparedSpellIds = SpellRules.initialPreparedSpellIds(
+                character = characterDraft,
+                characterClass = clazz,
+                spells = starterSpells,
+                alwaysPreparedSpellIds = subclassSelection.alwaysPreparedSpellIds
+            )
         )
         val derived = CharacterStatEngine.build(character)
         val spellSlotsSummary = formatSpellSlots(derived.spellSlotsByLevel)
@@ -157,7 +253,32 @@ class QuickSetupEngine @Inject constructor(
             add("Race: ${race.name}")
             raceSelection.variant?.let { add("Ancestry: ${it.name}") }
             add("Class: ${clazz.name}")
+            subclassSelection.subclass?.let { add("Subclass: ${it.name}") }
+            if (subclassSelection.selectedChoiceIds.isNotEmpty()) {
+                add(
+                    "Subclass Choices: ${
+                        CharacterSubclassRules.choiceDisplayNames(character).joinToString()
+                    }"
+                )
+            }
             add("Background: ${background.name}")
+            if (advancementSelections.isNotEmpty()) {
+                add(
+                    "Advancement: ${
+                        advancementSelections.joinToString { selection ->
+                            if (selection.isFeat) {
+                                compendiumService.getFeatById(selection.featId)?.name
+                                    ?: selection.featId
+                            } else {
+                                selection.abilityIncreases.entries.joinToString(
+                                    prefix = "ASI ",
+                                    separator = "/"
+                                ) { (ability, amount) -> "$ability +$amount" }
+                            }
+                        }
+                    }"
+                )
+            }
             add("Skills: ${character.skillProficiencyIds.joinToString().ifBlank { "None" }}")
             add("Tools: ${character.toolProficiencyIds.joinToString().ifBlank { "None" }}")
             add("Languages: ${character.languages.joinToString().ifBlank { "None" }}")
@@ -192,6 +313,8 @@ class QuickSetupEngine @Inject constructor(
             add("Starting Gold: ${character.goldPieces} gp")
             add("Starter Weapon: ${starterWeapon?.name ?: "None"}")
             add("Starter Armour: ${starterArmour?.name ?: "None"}")
+            add("Equipment Pack: ${starterPack?.name ?: "None"}")
+            add("Spell Focus: ${spellFocus?.name ?: "None"}")
             add("Shield: ${if (hasShield) "Yes" else "No"}")
             add("HP Max: ${derived.maxHp}")
             add("AC: ${derived.armourClass}")
@@ -209,6 +332,9 @@ class QuickSetupEngine @Inject constructor(
             if (racialSpells.isNotEmpty()) {
                 add("Racial Spells: ${racialSpells.joinToString { it.name }}")
             }
+            if (subclassSpells.isNotEmpty()) {
+                add("Subclass Spells: ${subclassSpells.joinToString { it.name }}")
+            }
             add("Spell Slots: $spellSlotsSummary")
             if (derived.unlockedFeatures.isNotEmpty()) {
                 add("Unlocked Features: ${derived.unlockedFeatures.joinToString()}")
@@ -219,20 +345,25 @@ class QuickSetupEngine @Inject constructor(
             add("Flaw: ${character.flaw}")
         }
 
+        val playableCharacter = CharacterSessionRules.initialise(
+            character.copy(notes = summaryLines.joinToString("\n"))
+        )
+
         return QuickSetupResult(
-            character = character.copy(
-                currentHp = derived.maxHp,
-                notes = summaryLines.joinToString("\n")
-            ),
+            character = playableCharacter,
             race = race,
             raceVariant = raceSelection.variant,
             characterClass = clazz,
+            subclass = subclassSelection.subclass,
             background = background,
             starterWeapon = starterWeapon,
             starterArmour = starterArmour,
+            starterPack = starterPack,
+            spellFocus = spellFocus,
             hasShield = hasShield,
             starterSpells = starterSpells,
             racialSpells = racialSpells,
+            subclassSpells = subclassSpells,
             spellSlotsSummary = spellSlotsSummary,
             summaryLines = summaryLines
         )

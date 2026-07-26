@@ -30,22 +30,44 @@ object CharacterProgressionRules {
         return clazz.spellSlotProgression[level.coerceIn(1, 20)].orEmpty()
     }
 
-    fun unlockedFeaturesForClassAndLevel(classId: String, level: Int): List<String> {
+    fun unlockedFeaturesForClassAndLevel(
+        classId: String,
+        level: Int,
+        subclassId: String = ""
+    ): List<String> {
         val clazz = classDefinitionFor(classId) ?: return emptyList()
         val clampedLevel = level.coerceIn(1, 20)
-        return clazz.classFeaturesByLevel
+        val classFeatures = clazz.classFeaturesByLevel
             .filterKeys { it <= clampedLevel }
-            .toSortedMap()
-            .values
-            .flatten()
+            .entries
+            .sortedBy { it.key }
+            .flatMap { it.value }
+        val subclassFeatures = SeedCompendiumData.subclasses
+            .firstOrNull {
+                it.id.equals(subclassId, ignoreCase = true) &&
+                    it.classId.equals(classId, ignoreCase = true) &&
+                    it.selectionLevel <= clampedLevel
+            }
+            ?.unlockedFeatures(clampedLevel)
+            .orEmpty()
+            .map { it.name }
+        return (classFeatures + subclassFeatures).distinct()
     }
 
-    fun build(classId: String, level: Int): CharacterProgression {
+    fun build(
+        classId: String,
+        level: Int,
+        subclassId: String = ""
+    ): CharacterProgression {
         return CharacterProgression(
             proficiencyBonus = proficiencyBonusForLevel(level),
             hitDie = hitDieForClass(classId),
             spellSlotsByLevel = spellSlotsForClassAndLevel(classId, level),
-            unlockedFeatures = unlockedFeaturesForClassAndLevel(classId, level)
+            unlockedFeatures = unlockedFeaturesForClassAndLevel(
+                classId,
+                level,
+                subclassId
+            )
         )
     }
 

@@ -45,6 +45,7 @@ import ie.setu.questledger.ui.components.general.ShowError
 import ie.setu.questledger.ui.screens.roster.RosterSort
 import ie.setu.questledger.ui.screens.roster.RosterViewModel
 import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.rules.CharacterSessionRules
 import ie.setu.questledger.data.compendium.CompendiumLookup
 import androidx.compose.material.icons.filled.MoreVert
 
@@ -211,7 +212,20 @@ private fun CharacterCard(
         }
 
         Text(
-            text = "${c.name} — ${CompendiumLookup.characterRaceDisplayName(c.race, c.raceVariant)} ${CompendiumLookup.classDisplayName(c.characterClass)} (Lv ${c.level})",
+            text = buildString {
+                append("${c.name} — ")
+                append(
+                    CompendiumLookup.characterRaceDisplayName(
+                        c.race,
+                        c.raceVariant
+                    )
+                )
+                if (c.subclass.isNotBlank()) {
+                    append(" ${CompendiumLookup.subclassDisplayName(c.subclass)}")
+                }
+                append(" ${CompendiumLookup.classDisplayName(c.characterClass)}")
+                append(" (Lv ${c.level})")
+            },
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .fillMaxWidth()
@@ -242,8 +256,10 @@ private fun CharacterCard(
 
             Spacer(Modifier.height(10.dp))
 
+            val playableCharacter = CharacterSessionRules.normalise(c)
+
             Text(
-                text = "HP ${c.currentHp}/${derived.maxHp}  •  AC ${derived.armourClass}  •  Prof ${formatMod(derived.proficiencyBonus)}",
+                text = "HP ${playableCharacter.currentHp}/${derived.maxHp}  •  AC ${derived.armourClass}  •  Prof ${formatMod(derived.proficiencyBonus)}",
                 style = MaterialTheme.typography.bodyMedium
             )
 

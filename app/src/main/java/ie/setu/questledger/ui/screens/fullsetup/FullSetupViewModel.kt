@@ -10,9 +10,14 @@ import ie.setu.questledger.data.compendium.AbilityType
 import ie.setu.questledger.data.compendium.SeedRaceVariantData
 import ie.setu.questledger.data.firestore.FirestoreService
 import ie.setu.questledger.data.rules.CharacterRaceRules
+import ie.setu.questledger.data.rules.CharacterSubclassRules
+import ie.setu.questledger.data.rules.CharacterAdvancementRules
 import ie.setu.questledger.data.rules.FullSetupEngine
 import ie.setu.questledger.data.rules.FullSetupResult
+import ie.setu.questledger.data.rules.SpellRules
+import ie.setu.questledger.data.rules.StartingSpellLimits
 import ie.setu.questledger.models.FullSetupConfig
+import ie.setu.questledger.models.characters.CharacterModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,13 +34,51 @@ class FullSetupViewModel @Inject constructor(
     var error = mutableStateOf("")
 
     fun getClasses() = compendiumService.getClasses()
+    fun getSubclassesForClass(classId: String) =
+        compendiumService.getSubclassesForClass(classId)
+    fun getSubclassChoiceGroups(subclassId: String, level: Int = 1) =
+        CharacterSubclassRules.unlockedChoiceGroups(
+            compendiumService.getSubclassById(subclassId),
+            level
+        )
     fun getRaces() = compendiumService.getRaces()
     fun getRaceVariantsForRace(raceId: String) =
         compendiumService.getRaceVariantsForRace(raceId)
     fun getBackgrounds() = compendiumService.getBackgrounds()
     fun getWeapons() = compendiumService.getWeapons()
     fun getArmour() = compendiumService.getArmour()
-    fun getSpells() = compendiumService.getSpells()
+    fun getEquipmentPacks() = compendiumService.getEquipmentPacks()
+    fun getFeats() = compendiumService.getFeats()
+
+    fun getEligibleFeats(
+        classId: String,
+        raceId: String,
+        raceVariantId: String,
+        selectedFlexibleAbilityIds: List<String>,
+        level: Int,
+        baseScores: Map<AbilityType, Int>
+    ) = compendiumService.getClassById(classId)?.let { clazz ->
+        val race = compendiumService.getRaceById(raceId) ?: return@let emptyList()
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        val scores = runCatching {
+            ie.setu.questledger.data.rules.AbilityScoreRules.applyRaceBonuses(
+                baseScores = baseScores,
+                race = race,
+                raceVariant = variant,
+                classPriority = clazz.quickBuildAbilityPriority,
+                selectedFlexibleAbilities = selectedFlexibleAbilityIds.map(
+                    AbilityType::valueOf
+                )
+            )
+        }.getOrElse { baseScores }
+        CharacterAdvancementRules.eligibleFeats(
+            characterClass = clazz,
+            level = level,
+            scores = scores,
+            feats = compendiumService.getFeats()
+        )
+    }.orEmpty()
 
     fun getFlexibleAbilityChoices(
         raceId: String,
@@ -47,8 +90,13 @@ class FullSetupViewModel @Inject constructor(
         return CharacterRaceRules.availableFlexibleAbilities(race, variant)
     }
 
-    fun getFlexibleAbilityChoiceCount(raceId: String): Int {
-        return compendiumService.getRaceById(raceId)?.flexibleStatBonuses?.size ?: 0
+    fun getFlexibleAbilityChoiceCount(raceId: String, raceVariantId: String): Int {
+        val race = compendiumService.getRaceById(raceId) ?: return 0
+        val variant = compendiumService.getRaceVariantById(raceVariantId)
+            ?.takeIf { it.raceId == raceId }
+        return ie.setu.questledger.data.rules.AbilityScoreRules
+            .effectiveFlexibleBonuses(race, variant)
+            .size
     }
 
     fun getRacialSkillOptions(raceId: String, raceVariantId: String): List<String> {
@@ -121,13 +169,38 @@ class FullSetupViewModel @Inject constructor(
         return compendiumService.getClassById(classId)?.starterArmourIds.orEmpty()
     }
 
+    fun getSuggestedPackIdsForClass(classId: String): List<String> {
+        return compendiumService.getClassById(classId)?.starterPackIds.orEmpty()
+    }
+
     fun getSuggestedSpellIdsForClass(classId: String): List<String> {
         return compendiumService.getClassById(classId)?.starterSpellIds.orEmpty()
     }
 
-    fun classUsesSpells(classId: String): Boolean {
+    fun getStartingSpellOptions(
+        classId: String,
+        level: Int = 1,
+        subclassId: String = "",
+        selectedSubclassChoiceIds: List<String> = emptyList()
+    ) = SpellRules.availableSpells(
+        character = CharacterModel(
+            characterClass = classId,
+            subclass = subclassId,
+            level = level,
+            selectedSubclassChoiceIds = selectedSubclassChoiceIds
+        ),
+        compendiumService = compendiumService
+    )
+
+    fun getStartingSpellLimits(classId: String): StartingSpellLimits {
+        val clazz = compendiumService.getClassById(classId)
+            ?: return StartingSpellLimits(cantrips = 0, levelledSpells = 0)
+        return SpellRules.startingLimits(clazz)
+    }
+
+    fun classUsesSpells(classId: String, level: Int = 1): Boolean {
         val clazz = compendiumService.getClassById(classId) ?: return false
-        return clazz.canCastAt(level = 1)
+        return clazz.canCastAt(level)
     }
 
     fun classCanStartWithShield(classId: String): Boolean {

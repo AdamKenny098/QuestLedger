@@ -8,6 +8,7 @@ data class PremadeCharacterTemplate(
     val defaultName: String,
     val raceId: String,
     val classId: String,
+    val subclassId: String = "",
     val level: Int,
     val backgroundId: String = "folk_hero",
     val raceVariantId: String = ""

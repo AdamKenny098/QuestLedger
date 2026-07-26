@@ -4,6 +4,7 @@ enum class InventoryItemType {
     WEAPON,
     ARMOUR,
     SHIELD,
+    AMMUNITION,
     CONSUMABLE,
     SPELL_FOCUS,
     TOOL,

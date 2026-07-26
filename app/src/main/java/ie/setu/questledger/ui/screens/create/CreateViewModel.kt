@@ -11,7 +11,8 @@ import ie.setu.questledger.data.compendium.BackgroundDefinition
 import ie.setu.questledger.data.compendium.CompendiumService
 import ie.setu.questledger.data.compendium.RaceDefinition
 import ie.setu.questledger.data.firestore.FirestoreService
-import ie.setu.questledger.data.rules.CharacterStatEngine
+import ie.setu.questledger.data.rules.CharacterSessionRules
+import ie.setu.questledger.data.rules.CharacterSubclassRules
 import ie.setu.questledger.data.storage.StorageService
 import ie.setu.questledger.models.characters.CharacterModel
 import kotlinx.coroutines.launch
@@ -75,10 +76,8 @@ class CreateViewModel @Inject constructor(
                     charisma = charisma
                 )
 
-                val derived = CharacterStatEngine.build(baseCharacter)
-
-                val finalCharacter = baseCharacter.copy(
-                    currentHp = derived.maxHp
+                val finalCharacter = CharacterSessionRules.initialise(
+                    CharacterSubclassRules.normalise(baseCharacter)
                 )
 
                 repository.insert(authService.email, finalCharacter)

@@ -11,9 +11,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ie.setu.questledger.data.rules.CurrencyRules
 import ie.setu.questledger.data.rules.InventoryEngine
 import ie.setu.questledger.models.characters.CharacterModel
 import ie.setu.questledger.models.inventory.InventoryItemType
+import kotlin.math.roundToInt
 
 @Composable
 fun CharacterInventoryCard(
@@ -23,7 +25,9 @@ fun CharacterInventoryCard(
     val inventory = character.inventory
     val usedSlots = InventoryEngine.usedSlots(inventory)
     val remainingSlots = InventoryEngine.remainingSlots(inventory)
+    val totalWeight = InventoryEngine.totalWeightLb(inventory)
 
+    val ammunition = inventory.items.filter { it.type == InventoryItemType.AMMUNITION }
     val consumables = inventory.items.filter { it.type == InventoryItemType.CONSUMABLE }
     val toolsAndFocuses = inventory.items.filter {
         it.type == InventoryItemType.TOOL || it.type == InventoryItemType.SPELL_FOCUS
@@ -49,50 +53,55 @@ fun CharacterInventoryCard(
 
             Text("Used Slots: $usedSlots / ${inventory.capacitySlots}")
             Text("Remaining Slots: $remainingSlots")
+            Text("Carried Weight: ${formatWeight(totalWeight)} lb.")
+
+            Spacer(Modifier.height(8.dp))
+
+            Text("Currency", style = MaterialTheme.typography.titleSmall)
+            Text(CurrencyRules.formatWallet(character))
 
             Spacer(Modifier.height(12.dp))
 
-            Text("Consumables", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(6.dp))
-            if (consumables.isEmpty()) {
-                Text("None")
-            } else {
-                consumables.forEach { item ->
-                    Text(itemLine(item.name, item.quantity, item.slotCost))
-                }
-            }
+            InventorySection("Ammunition", ammunition)
 
             Spacer(Modifier.height(12.dp))
 
-            Text("Spell Focus / Tools", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(6.dp))
-            if (toolsAndFocuses.isEmpty()) {
-                Text("None")
-            } else {
-                toolsAndFocuses.forEach { item ->
-                    Text(itemLine(item.name, item.quantity, item.slotCost))
-                }
-            }
+            InventorySection("Consumables", consumables)
 
             Spacer(Modifier.height(12.dp))
 
-            Text("Backpack Items", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(6.dp))
-            if (backpackItems.isEmpty()) {
-                Text("None")
-            } else {
-                backpackItems.forEach { item ->
-                    Text(itemLine(item.name, item.quantity, item.slotCost))
-                }
-            }
+            InventorySection("Spell Focus / Tools", toolsAndFocuses)
+
+            Spacer(Modifier.height(12.dp))
+
+            InventorySection("Backpack Items", backpackItems)
         }
     }
 }
 
-private fun itemLine(
-    name: String,
-    quantity: Int,
-    slotCost: Int
-): String {
-    return "$name x$quantity • Slots: ${quantity.coerceAtLeast(1) * slotCost}"
+@Composable
+private fun InventorySection(
+    title: String,
+    items: List<ie.setu.questledger.models.inventory.InventoryItemModel>
+) {
+    Text(title, style = MaterialTheme.typography.titleSmall)
+    Spacer(Modifier.height(6.dp))
+    if (items.isEmpty()) {
+        Text("None")
+    } else {
+        items.forEach { item ->
+            val details = buildList {
+                add("x${item.quantity}")
+                if (item.weightLb > 0.0) {
+                    add("${formatWeight(item.weightLb * item.quantity)} lb.")
+                }
+                if (item.costCp > 0) add(CurrencyRules.formatCost(item.costCp))
+            }
+            Text("${item.name} • ${details.joinToString(" • ")}")
+        }
+    }
+}
+
+private fun formatWeight(value: Double): String {
+    return ((value * 10.0).roundToInt() / 10.0).toString()
 }

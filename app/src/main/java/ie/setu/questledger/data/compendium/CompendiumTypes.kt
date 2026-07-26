@@ -31,6 +31,16 @@ enum class Handedness {
     VERSATILE
 }
 
+enum class WeaponCategory {
+    SIMPLE,
+    MARTIAL
+}
+
+enum class WeaponRangeType {
+    MELEE,
+    RANGED
+}
+
 enum class ArmourType {
     LIGHT,
     MEDIUM,
@@ -47,4 +57,27 @@ enum class SpellSchool {
     ILLUSION,
     NECROMANCY,
     TRANSMUTATION
+}
+
+enum class SpellComponent {
+    VERBAL,
+    SOMATIC,
+    MATERIAL
+}
+
+enum class SpellAttackType {
+    MELEE,
+    RANGED
+}
+
+enum class SpellLearningMode {
+    NONE,
+    KNOWN,
+    PREPARED,
+    SPELLBOOK
+}
+
+enum class SpellSource {
+    SRD_5_1,
+    QUESTLEDGER_COMPATIBILITY
 }

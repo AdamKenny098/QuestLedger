@@ -17,13 +17,33 @@ class CompendiumRepository @Inject constructor() : CompendiumService {
 
     override fun getClasses(): List<ClassDefinition> = SeedCompendiumData.classes
 
+    override fun getSubclasses(): List<SubclassDefinition> =
+        SeedCompendiumData.subclasses
+
+    override fun getSubclassesForClass(classId: String): List<SubclassDefinition> {
+        return SeedCompendiumData.subclasses.filter { it.classId == classId }
+    }
+
     override fun getBackgrounds(): List<BackgroundDefinition> = SeedCompendiumData.backgrounds
 
     override fun getWeapons(): List<WeaponDefinition> = SeedCompendiumData.weapons
 
     override fun getArmour(): List<ArmourDefinition> = SeedCompendiumData.armour
 
+    override fun getEquipment(): List<EquipmentDefinition> =
+        SeedCompendiumData.equipment
+
+    override fun getEquipmentPacks(): List<EquipmentPackDefinition> =
+        SeedCompendiumData.equipmentPacks
+
+    override fun getEquipmentCatalogue(): List<EquipmentCatalogueItem> =
+        SeedCompendiumData.equipmentCatalogue
+
     override fun getSpells(): List<SpellDefinition> = SeedCompendiumData.spells
+
+    override fun getFeats(): List<FeatDefinition> = SeedCompendiumData.feats
+
+    override fun getFeatures(): List<FeatureDefinition> = SeedCompendiumData.features
 
     override fun getRaceById(id: String): RaceDefinition? {
         return SeedCompendiumData.races.firstOrNull { it.id == id }
@@ -35,6 +55,10 @@ class CompendiumRepository @Inject constructor() : CompendiumService {
 
     override fun getClassById(id: String): ClassDefinition? {
         return SeedCompendiumData.classes.firstOrNull { it.id == id }
+    }
+
+    override fun getSubclassById(id: String): SubclassDefinition? {
+        return SeedCompendiumData.subclasses.firstOrNull { it.id == id }
     }
 
     override fun getBackgroundById(id: String): BackgroundDefinition? {
@@ -49,7 +73,27 @@ class CompendiumRepository @Inject constructor() : CompendiumService {
         return SeedCompendiumData.armour.firstOrNull { it.id == id }
     }
 
+    override fun getEquipmentById(id: String): EquipmentDefinition? {
+        return SeedCompendiumData.equipment.firstOrNull { it.id == id }
+    }
+
+    override fun getEquipmentPackById(id: String): EquipmentPackDefinition? {
+        return SeedCompendiumData.equipmentPacks.firstOrNull { it.id == id }
+    }
+
+    override fun getEquipmentCatalogueItemById(id: String): EquipmentCatalogueItem? {
+        return SeedCompendiumData.equipmentCatalogue.firstOrNull { it.id == id }
+    }
+
     override fun getSpellById(id: String): SpellDefinition? {
         return SeedCompendiumData.spells.firstOrNull { it.id == id }
+    }
+
+    override fun getFeatById(id: String): FeatDefinition? {
+        return SeedCompendiumData.feats.firstOrNull { it.id == id }
+    }
+
+    override fun getFeatureById(id: String): FeatureDefinition? {
+        return SeedCompendiumData.features.firstOrNull { it.id == id }
     }
 }

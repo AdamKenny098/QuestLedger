@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import ie.setu.questledger.data.compendium.CompendiumLookup
 import ie.setu.questledger.models.FullSetupConfig
+import ie.setu.questledger.models.characters.AdvancementSource
+import ie.setu.questledger.models.characters.CharacterAdvancementSelection
 import ie.setu.questledger.ui.components.general.CompendiumDropdown
 import ie.setu.questledger.ui.components.general.CompendiumOption
 import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
@@ -52,12 +54,15 @@ fun ScreenFullSetup(
     val backgrounds = remember { vm.getBackgrounds() }
     val weapons = remember { vm.getWeapons() }
     val armours = remember { vm.getArmour() }
-    val spells = remember { vm.getSpells() }
+    val equipmentPacks = remember { vm.getEquipmentPacks() }
+    val feats = remember { vm.getFeats() }
 
     var step by remember { mutableStateOf(FullSetupStep.CLASS) }
 
     var characterName by remember { mutableStateOf("") }
     var selectedClassId by remember { mutableStateOf(classes.firstOrNull()?.id.orEmpty()) }
+    var selectedSubclassId by remember { mutableStateOf("") }
+    val selectedSubclassChoiceIds = remember { mutableStateListOf<String>() }
     var selectedRaceId by remember { mutableStateOf(races.firstOrNull()?.id.orEmpty()) }
     var selectedRaceVariantId by remember {
         mutableStateOf(
@@ -100,8 +105,11 @@ fun ScreenFullSetup(
     val selectedRacialSkillIds = remember { mutableStateListOf<String>() }
     val selectedRacialLanguageIds = remember { mutableStateListOf<String>() }
     var selectedRacialSpellId by remember { mutableStateOf("") }
+    var selectedVariantFeatId by remember { mutableStateOf("") }
+    var selectedVariantFeatAbilityId by remember { mutableStateOf("") }
     var selectedWeaponId by remember { mutableStateOf<String?>(null) }
     var selectedArmourId by remember { mutableStateOf<String?>(null) }
+    var selectedPackId by remember { mutableStateOf<String?>(null) }
     var hasShield by remember { mutableStateOf(false) }
     val selectedSpellIds = remember { mutableStateListOf<String>() }
 
@@ -109,6 +117,31 @@ fun ScreenFullSetup(
 
     val selectedBackground = remember(selectedBackgroundId) {
         backgrounds.firstOrNull { it.id == selectedBackgroundId }
+    }
+    val classSubclasses = remember(selectedClassId) {
+        vm.getSubclassesForClass(selectedClassId)
+    }
+    val availableSubclasses = remember(selectedClassId) {
+        vm.getSubclassesForClass(selectedClassId)
+            .filter { it.selectionLevel <= 1 }
+    }
+    val selectedSubclass = remember(selectedSubclassId, availableSubclasses) {
+        availableSubclasses.firstOrNull { it.id == selectedSubclassId }
+    }
+    val subclassChoiceGroups = remember(selectedSubclassId) {
+        vm.getSubclassChoiceGroups(selectedSubclassId, 1)
+    }
+    val selectedSubclassSkillIds = remember(
+        selectedSubclassId,
+        selectedSubclassChoiceIds.toList()
+    ) {
+        selectedSubclass
+            ?.choiceGroups
+            .orEmpty()
+            .flatMap { it.options }
+            .filter { it.id in selectedSubclassChoiceIds }
+            .mapNotNull { it.grantedSkillProficiencyId }
+            .distinct()
     }
     val selectedRace = remember(selectedRaceId) {
         races.firstOrNull { it.id == selectedRaceId }
@@ -119,11 +152,42 @@ fun ScreenFullSetup(
     val selectedRaceVariant = remember(selectedRaceId, selectedRaceVariantId) {
         raceVariants.firstOrNull { it.id == selectedRaceVariantId }
     }
+    val selectedVariantFeat = remember(selectedVariantFeatId) {
+        feats.firstOrNull { it.id == selectedVariantFeatId }
+    }
+    val eligibleVariantFeats = remember(
+        selectedClassId,
+        selectedRaceId,
+        selectedRaceVariantId,
+        selectedFlexibleAbilityIds.toList(),
+        strength,
+        dexterity,
+        constitution,
+        intelligence,
+        wisdom,
+        charisma
+    ) {
+        vm.getEligibleFeats(
+            classId = selectedClassId,
+            raceId = selectedRaceId,
+            raceVariantId = selectedRaceVariantId,
+            selectedFlexibleAbilityIds = selectedFlexibleAbilityIds.toList(),
+            level = 1,
+            baseScores = mapOf(
+                ie.setu.questledger.data.compendium.AbilityType.STRENGTH to strength,
+                ie.setu.questledger.data.compendium.AbilityType.DEXTERITY to dexterity,
+                ie.setu.questledger.data.compendium.AbilityType.CONSTITUTION to constitution,
+                ie.setu.questledger.data.compendium.AbilityType.INTELLIGENCE to intelligence,
+                ie.setu.questledger.data.compendium.AbilityType.WISDOM to wisdom,
+                ie.setu.questledger.data.compendium.AbilityType.CHARISMA to charisma
+            )
+        )
+    }
     val flexibleAbilityChoices = remember(selectedRaceId, selectedRaceVariantId) {
         vm.getFlexibleAbilityChoices(selectedRaceId, selectedRaceVariantId)
     }
-    val flexibleAbilityChoiceCount = remember(selectedRaceId) {
-        vm.getFlexibleAbilityChoiceCount(selectedRaceId)
+    val flexibleAbilityChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
+        vm.getFlexibleAbilityChoiceCount(selectedRaceId, selectedRaceVariantId)
     }
     val racialSkillChoiceCount = remember(selectedRaceId, selectedRaceVariantId) {
         vm.getRacialSkillChoiceCount(selectedRaceId, selectedRaceVariantId)
@@ -158,20 +222,38 @@ fun ScreenFullSetup(
     }
     val classWeaponIds = remember(selectedClassId) { vm.getSuggestedWeaponIdsForClass(selectedClassId) }
     val classArmourIds = remember(selectedClassId) { vm.getSuggestedArmourIdsForClass(selectedClassId) }
-    val classSpellIds = remember(selectedClassId) { vm.getSuggestedSpellIdsForClass(selectedClassId) }
+    val classPackIds = remember(selectedClassId) {
+        vm.getSuggestedPackIdsForClass(selectedClassId)
+    }
+    val startingSpellOptions = remember(
+        selectedClassId,
+        selectedSubclassId,
+        selectedSubclassChoiceIds.toList()
+    ) {
+        vm.getStartingSpellOptions(
+            classId = selectedClassId,
+            subclassId = selectedSubclassId,
+            selectedSubclassChoiceIds = selectedSubclassChoiceIds.toList()
+        )
+    }
+    val startingSpellLimits = remember(selectedClassId) {
+        vm.getStartingSpellLimits(selectedClassId)
+    }
     val classProficiencies = remember(
         selectedClassId,
         selectedBackgroundId,
         selectedRaceId,
         selectedRaceVariantId,
         fixedRacialSkillIds,
-        selectedRacialSkillIds.toList()
+        selectedRacialSkillIds.toList(),
+        selectedSubclassSkillIds
     ) {
         vm.getSuggestedProficienciesForClass(selectedClassId)
             .filterNot {
                 it in selectedBackground?.skillProficiencyIds.orEmpty() ||
                     it in fixedRacialSkillIds ||
-                    it in selectedRacialSkillIds
+                    it in selectedRacialSkillIds ||
+                    it in selectedSubclassSkillIds
             }
     }
     val proficiencyChoiceCount = remember(selectedClassId) {
@@ -181,13 +263,54 @@ fun ScreenFullSetup(
         vm.classCanStartWithShield(selectedClassId)
     }
 
-    LaunchedEffect(selectedClassId) {
+    LaunchedEffect(
+        selectedClassId,
+        selectedSubclassId,
+        selectedSubclassChoiceIds.toList()
+    ) {
         val selectedClass = classes.firstOrNull { it.id == selectedClassId }
         selectedProficiencyIds.clear()
         selectedSpellIds.clear()
+        selectedSpellIds.addAll(
+            selectedClass
+                ?.starterSpellIds
+                .orEmpty()
+                .filter { id -> startingSpellOptions.any { it.id == id } }
+        )
         selectedWeaponId = selectedClass?.defaultWeaponId
         selectedArmourId = selectedClass?.defaultArmourId
+        selectedPackId = selectedClass?.defaultPackId
         hasShield = selectedClass?.startsWithShield == true
+    }
+
+    LaunchedEffect(selectedClassId, selectedSubclassId) {
+        if (availableSubclasses.isEmpty()) {
+            selectedSubclassId = ""
+            selectedSubclassChoiceIds.clear()
+            return@LaunchedEffect
+        }
+        val validSubclass = availableSubclasses.firstOrNull {
+            it.id == selectedSubclassId
+        }
+        if (validSubclass == null) {
+            selectedSubclassId = availableSubclasses.first().id
+            return@LaunchedEffect
+        }
+        val normalisedChoices = validSubclass.choiceGroups
+            .filter { it.minimumLevel <= 1 }
+            .flatMap { group ->
+                val optionIds = group.options.map { it.id }
+                (
+                    selectedSubclassChoiceIds.filter { it in optionIds } +
+                        optionIds
+                    )
+                    .distinct()
+                    .take(group.selectionCount)
+            }
+        if (normalisedChoices != selectedSubclassChoiceIds.toList()) {
+            selectedSubclassChoiceIds.clear()
+            selectedSubclassChoiceIds.addAll(normalisedChoices)
+        }
     }
 
     LaunchedEffect(selectedBackgroundId) {
@@ -207,6 +330,8 @@ fun ScreenFullSetup(
         selectedRaceId,
         selectedRaceVariantId,
         selectedClassId,
+        selectedSubclassId,
+        selectedSubclassChoiceIds.toList(),
         selectedBackgroundId
     ) {
         val validVariant = raceVariants.firstOrNull { it.id == selectedRaceVariantId }
@@ -247,6 +372,16 @@ fun ScreenFullSetup(
             racialLanguageOptions.take(racialLanguageChoiceCount)
         )
         selectedRacialSpellId = racialCantripOptions.firstOrNull()?.id.orEmpty()
+        if (selectedRaceVariant?.grantsFeatChoice == true) {
+            val feat = eligibleVariantFeats.firstOrNull { it.id == selectedVariantFeatId }
+                ?: eligibleVariantFeats.firstOrNull()
+            selectedVariantFeatId = feat?.id.orEmpty()
+            selectedVariantFeatAbilityId =
+                feat?.abilityBonusChoices?.firstOrNull()?.name.orEmpty()
+        } else {
+            selectedVariantFeatId = ""
+            selectedVariantFeatAbilityId = ""
+        }
 
         selectedProficiencyIds.removeAll(
             (fixedRacialSkillIds + selectedRacialSkillIds).toSet()
@@ -261,13 +396,15 @@ fun ScreenFullSetup(
         armours.filter { it.id in classArmourIds }
     }
 
-    val filteredSpells = remember(classSpellIds, spells) {
-        spells.filter { it.id in classSpellIds }
+    val filteredPacks = remember(classPackIds, equipmentPacks) {
+        equipmentPacks.filter { it.id in classPackIds }
     }
 
     val config = remember(
         characterName,
         selectedClassId,
+        selectedSubclassId,
+        selectedSubclassChoiceIds.toList(),
         selectedRaceId,
         selectedRaceVariantId,
         selectedBackgroundId,
@@ -282,8 +419,11 @@ fun ScreenFullSetup(
         selectedRacialSkillIds.toList(),
         selectedRacialLanguageIds.toList(),
         selectedRacialSpellId,
+        selectedVariantFeatId,
+        selectedVariantFeatAbilityId,
         selectedWeaponId,
         selectedArmourId,
+        selectedPackId,
         hasShield,
         selectedSpellIds.toList(),
         selectedPersonalityTrait1,
@@ -296,6 +436,7 @@ fun ScreenFullSetup(
             name = characterName.trim(),
             raceId = selectedRaceId,
             classId = selectedClassId,
+            subclassId = selectedSubclassId,
             level = 1,
             strength = strength,
             dexterity = dexterity,
@@ -306,6 +447,7 @@ fun ScreenFullSetup(
             selectedProficiencyIds = selectedProficiencyIds.toList(),
             starterWeaponId = selectedWeaponId,
             starterArmourId = selectedArmourId,
+            starterPackId = selectedPackId,
             hasShield = hasShield,
             starterSpellIds = selectedSpellIds.toList(),
             backgroundId = selectedBackgroundId,
@@ -314,6 +456,19 @@ fun ScreenFullSetup(
             selectedRacialSkillIds = selectedRacialSkillIds.toList(),
             selectedRacialLanguageIds = selectedRacialLanguageIds.toList(),
             selectedRacialSpellId = selectedRacialSpellId,
+            selectedSubclassChoiceIds = selectedSubclassChoiceIds.toList(),
+            advancementSelections = if (selectedRaceVariant?.grantsFeatChoice == true) {
+                listOf(
+                    CharacterAdvancementSelection(
+                        level = 1,
+                        source = AdvancementSource.VARIANT_HUMAN,
+                        featId = selectedVariantFeatId,
+                        featAbilityChoiceId = selectedVariantFeatAbilityId
+                    )
+                )
+            } else {
+                emptyList()
+            },
             personalityTraits = listOf(
                 selectedPersonalityTrait1,
                 selectedPersonalityTrait2
@@ -388,6 +543,75 @@ fun ScreenFullSetup(
                             onClick = { selectedClassId = clazz.id }
                         )
                         Spacer(Modifier.height(10.dp))
+                    }
+
+                    if (availableSubclasses.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Choose Subclass",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        availableSubclasses.forEach { subclass ->
+                            ChoiceCard(
+                                title = subclass.name,
+                                subtitle = "Selected at level ${subclass.selectionLevel}",
+                                summary = subclass.description,
+                                isSelected = subclass.id == selectedSubclassId,
+                                onClick = {
+                                    selectedSubclassId = subclass.id
+                                    selectedSubclassChoiceIds.clear()
+                                }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
+
+                        subclassChoiceGroups.forEach { group ->
+                            repeat(group.selectionCount) { index ->
+                                val optionIds = group.options.map { it.id }.toSet()
+                                val selectedForGroup =
+                                    selectedSubclassChoiceIds.filter { it in optionIds }
+                                val selectedId =
+                                    selectedForGroup.getOrNull(index).orEmpty()
+                                val blocked = selectedForGroup
+                                    .filterIndexed { otherIndex, _ ->
+                                        otherIndex != index
+                                    }
+                                    .toSet()
+                                CompendiumDropdown(
+                                    label = if (group.selectionCount == 1) {
+                                        group.name
+                                    } else {
+                                        "${group.name} ${index + 1}"
+                                    },
+                                    options = group.options
+                                        .filterNot { it.id in blocked }
+                                        .map { CompendiumOption(it.id, it.name) },
+                                    selectedId = selectedId,
+                                    onSelected = { optionId ->
+                                        val oldId = selectedForGroup.getOrNull(index)
+                                        if (oldId != null) {
+                                            val listIndex =
+                                                selectedSubclassChoiceIds.indexOf(oldId)
+                                            selectedSubclassChoiceIds[listIndex] =
+                                                optionId
+                                        } else {
+                                            selectedSubclassChoiceIds.add(optionId)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        }
+                    } else {
+                        classSubclasses.firstOrNull()?.let { subclass ->
+                            Text(
+                                "${subclass.name} unlocks at level " +
+                                    "${subclass.selectionLevel}.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
 
@@ -581,6 +805,55 @@ fun ScreenFullSetup(
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
+
+                        if (selectedRaceVariant?.grantsFeatChoice == true) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Bonus Feat",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                "Variant Human begins with one feat.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            CompendiumDropdown(
+                                label = "Feat",
+                                options = eligibleVariantFeats.map {
+                                    CompendiumOption(it.id, it.name)
+                                },
+                                selectedId = selectedVariantFeatId,
+                                onSelected = { featId ->
+                                    selectedVariantFeatId = featId
+                                    selectedVariantFeatAbilityId = feats
+                                        .firstOrNull { it.id == featId }
+                                        ?.abilityBonusChoices
+                                        ?.firstOrNull()
+                                        ?.name
+                                        .orEmpty()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            selectedVariantFeat?.let { feat ->
+                                Spacer(Modifier.height(6.dp))
+                                Text(feat.summary, style = MaterialTheme.typography.bodySmall)
+                                if (feat.abilityBonusChoices.isNotEmpty()) {
+                                    Spacer(Modifier.height(8.dp))
+                                    CompendiumDropdown(
+                                        label = "Feat Ability",
+                                        options = feat.abilityBonusChoices.map {
+                                            CompendiumOption(
+                                                it.name,
+                                                CompendiumLookup.abilityLabel(it)
+                                            )
+                                        },
+                                        selectedId = selectedVariantFeatAbilityId,
+                                        onSelected = { selectedVariantFeatAbilityId = it },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -770,6 +1043,19 @@ fun ScreenFullSetup(
                     } else {
                         Text("This class does not start proficient with a shield.")
                     }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text("Equipment Pack", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(6.dp))
+
+                    filteredPacks.forEach { pack ->
+                        ToggleLine(
+                            label = "${pack.name} • ${pack.contents.size} item types",
+                            selected = selectedPackId == pack.id,
+                            onClick = { selectedPackId = pack.id }
+                        )
+                    }
                 }
 
                 FullSetupStep.SPELLS -> {
@@ -779,15 +1065,43 @@ fun ScreenFullSetup(
                     if (!vm.classUsesSpells(selectedClassId)) {
                         Text("This class does not start with spell selection.")
                     } else {
-                        filteredSpells.forEach { spell ->
+                        val selectedCantripCount = selectedSpellIds.count { selectedId ->
+                            startingSpellOptions.any { it.id == selectedId && it.isCantrip }
+                        }
+                        val selectedLevelledCount =
+                            selectedSpellIds.size - selectedCantripCount
+
+                        Text(
+                            "Cantrips: $selectedCantripCount/${startingSpellLimits.cantrips} • " +
+                                "Level 1 spells: $selectedLevelledCount/" +
+                                startingSpellLimits.levelledSpells
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        startingSpellOptions.forEach { spell ->
                             ToggleLine(
-                                label = spell.name,
+                                label = "${spell.name} • ${spell.levelLabel} • " +
+                                    spell.school.name.lowercase()
+                                        .replaceFirstChar { it.uppercase() },
                                 selected = selectedSpellIds.contains(spell.id),
                                 onClick = {
                                     if (selectedSpellIds.contains(spell.id)) {
                                         selectedSpellIds.remove(spell.id)
-                                    } else if (selectedSpellIds.size < 3) {
-                                        selectedSpellIds.add(spell.id)
+                                    } else {
+                                        val currentCount = selectedSpellIds.count { selectedId ->
+                                            startingSpellOptions.any {
+                                                it.id == selectedId &&
+                                                    it.isCantrip == spell.isCantrip
+                                            }
+                                        }
+                                        val limit = if (spell.isCantrip) {
+                                            startingSpellLimits.cantrips
+                                        } else {
+                                            startingSpellLimits.levelledSpells
+                                        }
+                                        if (currentCount < limit) {
+                                            selectedSpellIds.add(spell.id)
+                                        }
                                     }
                                 }
                             )
@@ -890,6 +1204,9 @@ fun ScreenFullSetup(
                                         racialCantripOptions.isNotEmpty() &&
                                             selectedRacialSpellId.isBlank() ->
                                             localError = "Choose a racial cantrip"
+                                        selectedRaceVariant?.grantsFeatChoice == true &&
+                                            selectedVariantFeatId.isBlank() ->
+                                            localError = "Choose a Variant Human feat"
                                         else -> {
                                             localError = null
                                             step = FullSetupStep.BACKGROUND

@@ -15,7 +15,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -28,7 +27,11 @@ import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentCar
 import ie.setu.questledger.ui.components.general.backgrounds.CharacterBackgroundCard
 import ie.setu.questledger.ui.components.general.ancestry.CharacterAncestryCard
 import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryCard
+import ie.setu.questledger.ui.components.general.session.CharacterSessionCard
 import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
+import ie.setu.questledger.ui.components.general.advancement.CharacterAdvancementCard
+import ie.setu.questledger.ui.components.general.features.CharacterFeaturesCard
+import ie.setu.questledger.ui.components.general.subclasses.CharacterSubclassCard
 
 @Composable
 fun ScreenCharacterDetails(
@@ -37,6 +40,8 @@ fun ScreenCharacterDetails(
     vm: CharacterDetailsViewModel = hiltViewModel()
 ) {
     val c by vm.character
+    val isSessionSaving by vm.isSessionSaving
+    val sessionMessage by vm.sessionMessage
 
     val isSpellcaster = CharacterStatEngine.build(c).spellcastingAbilityLabel != null
 
@@ -74,7 +79,21 @@ fun ScreenCharacterDetails(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "${CompendiumLookup.characterRaceDisplayName(c.race, c.raceVariant)} ${CompendiumLookup.classDisplayName(c.characterClass)} • Level ${c.level}",
+                text = buildString {
+                    append(
+                        CompendiumLookup.characterRaceDisplayName(
+                            c.race,
+                            c.raceVariant
+                        )
+                    )
+                    if (c.subclass.isNotBlank()) {
+                        append(" ")
+                        append(CompendiumLookup.subclassDisplayName(c.subclass))
+                    }
+                    append(" ")
+                    append(CompendiumLookup.classDisplayName(c.characterClass))
+                    append(" • Level ${c.level}")
+                },
                 style = MaterialTheme.typography.bodyLarge
             )
 
@@ -114,6 +133,35 @@ fun ScreenCharacterDetails(
 
             Spacer(Modifier.height(16.dp))
 
+            CharacterSessionCard(
+                character = c,
+                isSaving = isSessionSaving,
+                message = sessionMessage,
+                onDamage = vm::takeDamage,
+                onHeal = vm::heal,
+                onSetTemporaryHitPoints = vm::setTemporaryHitPoints,
+                onRollDeathSave = vm::rollDeathSave,
+                onResetDeathSaves = vm::resetDeathSaves,
+                onSpendHitDie = vm::spendHitDie,
+                onUseSpellSlot = vm::useSpellSlot,
+                onRestoreSpellSlot = vm::restoreSpellSlot,
+                onShortRest = vm::takeShortRest,
+                onLongRest = vm::takeLongRest,
+                onToggleInspiration = vm::toggleInspiration
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterFeaturesCard(
+                character = c,
+                isSaving = isSessionSaving,
+                onUseFeature = vm::useFeature,
+                onRestoreFeature = vm::restoreFeature,
+                onEndFeature = vm::endFeature
+            )
+
+            Spacer(Modifier.height(12.dp))
+
             CharacterDerivedStatsCard(character = c)
 
             Spacer(Modifier.height(12.dp))
@@ -122,7 +170,15 @@ fun ScreenCharacterDetails(
 
             Spacer(Modifier.height(12.dp))
 
+            CharacterSubclassCard(character = c)
+
+            Spacer(Modifier.height(12.dp))
+
             CharacterBackgroundCard(character = c)
+
+            Spacer(Modifier.height(12.dp))
+
+            CharacterAdvancementCard(character = c)
 
             Spacer(Modifier.height(12.dp))
 
