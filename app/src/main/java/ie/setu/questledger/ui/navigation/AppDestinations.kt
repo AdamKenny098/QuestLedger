@@ -2,16 +2,16 @@ package ie.setu.questledger.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Casino
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.graphics.vector.ImageVector
 
 interface AppDestination {
     val icon: ImageVector
@@ -19,28 +19,40 @@ interface AppDestination {
     val route: String
 }
 
+object Roster : AppDestination {
+    override val icon = Icons.Filled.Groups
+    override val label = "Characters"
+    override val route = NavRoutes.ROSTER
+}
+
 object Create : AppDestination {
-    override val icon = Icons.Filled.PersonAdd
+    override val icon = Icons.Filled.AddCircle
     override val label = "Create"
     override val route = NavRoutes.CREATE
 }
 
-object Roster : AppDestination {
-    override val icon = Icons.Filled.List
-    override val label = "Roster"
-    override val route = NavRoutes.ROSTER
+object Dice : AppDestination {
+    override val icon = Icons.Filled.Casino
+    override val label = "Dice"
+    override val route = "dice"
 }
 
-object About : AppDestination {
-    override val icon = Icons.Filled.Info
-    override val label = "About"
-    override val route = NavRoutes.ABOUT
+object DMWorkspace : AppDestination {
+    override val icon = Icons.Filled.AutoStories
+    override val label = "DM"
+    override val route = "dm_workspace"
 }
 
 object Profile : AppDestination {
     override val icon = Icons.Filled.Person
     override val label = "Profile"
     override val route = NavRoutes.PROFILE
+}
+
+object About : AppDestination {
+    override val icon = Icons.Filled.Info
+    override val label = "About"
+    override val route = NavRoutes.ABOUT
 }
 
 object CampaignMap : AppDestination {
@@ -67,19 +79,12 @@ object FullSetupCharacter : AppDestination {
     override val route = "full_setup_character"
 }
 
-object Dice : AppDestination {
-    override val icon = Icons.Filled.Casino
-    override val label = "Dice"
-    override val route = "dice"
-}
-
 object CharacterSpellbook : AppDestination {
     override val icon = Icons.Filled.MenuBook
     override val label = "Spellbook"
     override val route = "character_spellbook/{id}"
 
     fun createRoute(id: String): String = "character_spellbook/$id"
-
 }
 
 object CharacterEdit : AppDestination {
@@ -96,12 +101,6 @@ object CharacterDetails : AppDestination {
     override val route = "details/{id}"
 
     fun createRoute(id: String): String = "details/$id"
-}
-
-object DMWorkspace : AppDestination {
-    override val icon = Icons.Filled.AutoStories
-    override val label = "DM"
-    override val route = "dm_workspace"
 }
 
 object DMCampaignEditor : AppDestination {
@@ -160,4 +159,4 @@ object DMPlaceEditor : AppDestination {
     }
 }
 
-val bottomNavDestinations = listOf(Create, Roster, Dice, DMWorkspace, Profile, CampaignMap)
+val bottomNavDestinations = listOf(Roster, Create, Dice, DMWorkspace, Profile)

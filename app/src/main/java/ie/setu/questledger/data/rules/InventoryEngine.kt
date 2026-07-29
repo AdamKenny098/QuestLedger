@@ -9,7 +9,13 @@ import kotlin.math.ceil
 
 object InventoryEngine {
 
+    fun hasBagOfHolding(inventory: CharacterInventory): Boolean {
+        return inventory.items.any(::isBagOfHolding)
+    }
+
     fun usedSlots(inventory: CharacterInventory): Int {
+        if (hasBagOfHolding(inventory)) return 0
+
         return inventory.items.sumOf { item ->
             val stacks = ceil(
                 item.quantity.coerceAtLeast(1).toDouble() /
@@ -20,6 +26,8 @@ object InventoryEngine {
     }
 
     fun totalWeightLb(inventory: CharacterInventory): Double {
+        if (hasBagOfHolding(inventory)) return 0.0
+
         return inventory.items.sumOf { item ->
             item.weightLb * item.quantity.coerceAtLeast(1)
         }
@@ -34,7 +42,8 @@ object InventoryEngine {
         item: InventoryItemModel
     ): Boolean {
         val candidate = mergeItem(inventory, item)
-        return usedSlots(candidate) <= inventory.capacitySlots
+        return hasBagOfHolding(candidate) ||
+            usedSlots(candidate) <= inventory.capacitySlots
     }
 
     fun addItem(
@@ -76,6 +85,8 @@ object InventoryEngine {
                 )
             )
         }
+        if (hasBagOfHolding(proposed)) return proposed
+
         return proposed.copy(
             capacitySlots = maxOf(
                 inventory.capacitySlots,
@@ -98,7 +109,14 @@ object InventoryEngine {
                 if (it.id == itemId) it.copy(quantity = nextQuantity) else it
             }
         )
-        return if (usedSlots(updated) <= inventory.capacitySlots) updated else inventory
+        return if (
+            hasBagOfHolding(updated) ||
+            usedSlots(updated) <= inventory.capacitySlots
+        ) {
+            updated
+        } else {
+            inventory
+        }
     }
 
     fun removeItem(
@@ -239,4 +257,11 @@ object InventoryEngine {
         minimumStrength = minimumStrength,
         stealthDisadvantage = stealthDisadvantage
     )
+
+    private fun isBagOfHolding(item: InventoryItemModel): Boolean {
+        val identifiers = listOf(item.id, item.catalogueId, item.name)
+        return identifiers.any { value ->
+            value.lowercase().filter(Char::isLetterOrDigit) == "bagofholding"
+        }
+    }
 }

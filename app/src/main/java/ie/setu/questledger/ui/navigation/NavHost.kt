@@ -2,10 +2,10 @@ package ie.setu.questledger.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,7 +22,6 @@ import ie.setu.questledger.ui.screens.details.ScreenCharacterDetails
 import ie.setu.questledger.ui.screens.fullsetup.ScreenFullSetup
 import ie.setu.questledger.ui.screens.map.CampaignMapScreen
 import ie.setu.questledger.ui.screens.profile.ScreenProfile
-import ie.setu.questledger.ui.screens.roster.RosterViewModel
 import ie.setu.questledger.ui.screens.quicksetup.ScreenQuickSetupCharacter
 import ie.setu.questledger.ui.screens.premade.ScreenPremadeCharacters
 import ie.setu.questledger.ui.screens.ScreenDiceRoller
@@ -33,14 +32,12 @@ import ie.setu.questledger.ui.screens.dm.ScreenDMCampaignEditor
 import ie.setu.questledger.ui.screens.dm.ScreenDMQuestEditor
 import ie.setu.questledger.ui.screens.dm.ScreenDMNpcEditor
 import ie.setu.questledger.ui.screens.dm.ScreenDMPlaceEditor
-import androidx.navigation.navArgument
 
 @Composable
 fun QuestLedgerNavHost(
     authService: AuthService
 ) {
     val navController = rememberNavController()
-    val rosterVM: RosterViewModel = hiltViewModel()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -52,46 +49,49 @@ fun QuestLedgerNavHost(
     }
 
     val isAuthScreen = currentRoute == NavRoutes.LOGIN || currentRoute == NavRoutes.REGISTER
-    val isDetailScreen =
-        currentRoute == CharacterDetails.route ||
-                currentRoute == CharacterEdit.route ||
-                currentRoute == CharacterSpellbook.route
+    val topLevelRoutes = bottomNavDestinations.map { it.route }.toSet()
+    val showBottomBar = currentRoute in topLevelRoutes
 
     val currentLabel = when (currentRoute) {
-        NavRoutes.CREATE -> "Create"
+        NavRoutes.ROSTER -> "Characters"
+        NavRoutes.CREATE -> "Create Character"
         NavRoutes.ABOUT -> "About"
         NavRoutes.PROFILE -> "Profile"
-        CharacterDetails.route -> "Details"
+        CharacterDetails.route -> "Character Sheet"
         CharacterEdit.route -> "Edit Character"
         CharacterSpellbook.route -> "Spellbook"
-        Dice.route -> "Dice"
-        CampaignMap.route -> "Map"
-        else -> "Roster"
+        QuickSetupCharacter.route -> "Quick Setup"
+        PremadeCharacters.route -> "Premade Heroes"
+        FullSetupCharacter.route -> "Full Setup"
+        Dice.route -> "Dice Roller"
+        DMWorkspace.route -> "Dungeon Master"
+        CampaignMap.route -> "Campaign Map"
+        DMCampaignEditor.route -> "Campaign Editor"
+        DMQuestEditor.route -> "Quest Editor"
+        DMNpcEditor.route -> "NPC Editor"
+        DMPlaceEditor.route -> "Place Editor"
+        else -> "QuestLedger"
     }
 
     val canNavigateBack =
         currentRoute != null &&
-                currentRoute != NavRoutes.ROSTER &&
-                currentRoute != NavRoutes.LOGIN &&
-                currentRoute != NavRoutes.REGISTER
-
-    val showDeleteAll = currentRoute == NavRoutes.ROSTER
+                currentRoute !in topLevelRoutes &&
+                !isAuthScreen
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             if (!isAuthScreen) {
                 TopAppBarProvider(
                     currentScreenLabel = currentLabel,
                     canNavigateBack = canNavigateBack,
                     navigateUp = { navController.popBackStack() },
-                    showDeleteAll = showDeleteAll,
-                    onHelp = { navController.navigate(NavRoutes.ABOUT) },
-                    onDeleteAll = { rosterVM.deleteAll() }
+                    onHelp = { navController.navigate(NavRoutes.ABOUT) }
                 )
             }
         },
         bottomBar = {
-            if (!isAuthScreen && !isDetailScreen) {
+            if (!isAuthScreen && showBottomBar) {
                 QuestLedgerBottomBar(navController)
             }
         }
@@ -134,9 +134,14 @@ fun QuestLedgerNavHost(
                     onOpenDetails = { id ->
                         navController.navigate(CharacterDetails.createRoute(id))
                     },
-
+                    onOpenEdit = { id ->
+                        navController.navigate(CharacterEdit.createRoute(id))
+                    },
                     onOpenAbout = {
                         navController.navigate((About.route))
+                    },
+                    onCreateCharacter = {
+                        navController.navigate(NavRoutes.CREATE)
                     }
                 )
             }
@@ -201,9 +206,6 @@ fun QuestLedgerNavHost(
                 arguments = listOf(navArgument("id") { type = NavType.StringType })
             ) {
                 ScreenCharacterDetails(
-                    onOpenEdit = { id ->
-                        navController.navigate(CharacterEdit.createRoute(id))
-                    },
                     onOpenSpellbook = { id ->
                         navController.navigate(CharacterSpellbook.createRoute(id))
                     }
@@ -248,6 +250,9 @@ fun QuestLedgerNavHost(
                     },
                     onOpenPlaceEditor = { placeId ->
                         navController.navigate(DMPlaceEditor.createRoute(placeId))
+                    },
+                    onOpenMap = {
+                        navController.navigate(CampaignMap.route)
                     }
                 )
             }

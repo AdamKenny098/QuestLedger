@@ -1,192 +1,286 @@
 package ie.setu.questledger.ui.screens.details
 
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import ie.setu.questledger.data.compendium.CompendiumLookup
+import ie.setu.questledger.data.rules.CharacterSessionRules
 import ie.setu.questledger.data.rules.CharacterStatEngine
-import ie.setu.questledger.ui.components.general.equipment.CharacterEquipmentCard
-import ie.setu.questledger.ui.components.general.backgrounds.CharacterBackgroundCard
-import ie.setu.questledger.ui.components.general.ancestry.CharacterAncestryCard
-import ie.setu.questledger.ui.components.general.inventory.CharacterInventoryCard
-import ie.setu.questledger.ui.components.general.session.CharacterSessionCard
-import ie.setu.questledger.ui.components.general.stats.CharacterDerivedStatsCard
 import ie.setu.questledger.ui.components.general.advancement.CharacterAdvancementCard
+import ie.setu.questledger.ui.components.general.ancestry.CharacterAncestryCard
+import ie.setu.questledger.ui.components.general.backgrounds.CharacterBackgroundCard
 import ie.setu.questledger.ui.components.general.features.CharacterFeaturesCard
+import ie.setu.questledger.ui.components.general.session.CharacterSessionCard
 import ie.setu.questledger.ui.components.general.subclasses.CharacterSubclassCard
+import ie.setu.questledger.ui.components.ledger.CharacterAbilitiesBeyondPanel
+import ie.setu.questledger.ui.components.ledger.CharacterCombatRollsPanel
+import ie.setu.questledger.ui.components.ledger.CharacterFeaturesOverviewPanel
+import ie.setu.questledger.ui.components.ledger.CharacterInventoryItemCards
+import ie.setu.questledger.ui.components.ledger.CharacterPlayOverviewPanel
+import ie.setu.questledger.ui.components.ledger.CharacterSheetHeader
+import ie.setu.questledger.ui.components.ledger.CharacterSheetSection
+import ie.setu.questledger.ui.components.ledger.CharacterSheetTabs
+import ie.setu.questledger.ui.components.ledger.CharacterStoryOverviewPanel
+import ie.setu.questledger.ui.components.ledger.LedgerDisclosureSection
+import ie.setu.questledger.ui.components.ledger.LedgerPanel
 
 @Composable
 fun ScreenCharacterDetails(
-    onOpenEdit: (String) -> Unit,
     onOpenSpellbook: (String) -> Unit = {},
     vm: CharacterDetailsViewModel = hiltViewModel()
 ) {
-    val c by vm.character
+    val loadedCharacter by vm.character
+    val isLoading by vm.isLoading
+    val isError by vm.isErr
+    val error by vm.error
     val isSessionSaving by vm.isSessionSaving
     val sessionMessage by vm.sessionMessage
 
-    val isSpellcaster = CharacterStatEngine.build(c).spellcastingAbilityLabel != null
+    when {
+        isLoading && loadedCharacter.id.isBlank() -> {
+            CharacterSheetLoading()
+            return
+        }
+
+        isError && loadedCharacter.id.isBlank() -> {
+            CharacterSheetError(
+                message = error.message ?: "The character could not be loaded."
+            )
+            return
+        }
+    }
+
+    val character = CharacterSessionRules.normalise(loadedCharacter)
+    val derived = CharacterStatEngine.build(character)
+    val showSpellbook =
+        derived.spellcastingAbilityLabel != null ||
+            character.knownSpellIds.isNotEmpty() ||
+            character.racialSpellIds.isNotEmpty() ||
+            character.subclassSpellIds.isNotEmpty()
+    val sections = remember {
+        buildList {
+            add(CharacterSheetSection.OVERVIEW)
+            add(CharacterSheetSection.COMBAT)
+            add(CharacterSheetSection.ABILITIES)
+            add(CharacterSheetSection.FEATURES)
+            add(CharacterSheetSection.INVENTORY)
+            add(CharacterSheetSection.STORY)
+        }
+    }
+    var selectedSectionName by rememberSaveable {
+        mutableStateOf(CharacterSheetSection.OVERVIEW.name)
+    }
+    val selectedSection = sections.firstOrNull {
+        it.name == selectedSectionName
+    } ?: CharacterSheetSection.OVERVIEW
+    val scrollStates = remember {
+        CharacterSheetSection.values().associateWith { ScrollState(0) }
+    }
+    val selectSection: (CharacterSheetSection) -> Unit = {
+        selectedSectionName = it.name
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Text("Character Details", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(12.dp))
-
-            if (c.imageUri.isNotBlank()) {
-                AsyncImage(
-                    model = c.imageUri,
-                    contentDescription = "Character Image",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(12.dp))
+        Column(modifier = Modifier.fillMaxSize()) {
+            CharacterSheetHeader(
+                character = character,
+                derived = derived,
+                showSpellbook = showSpellbook,
+                isSaving = isSessionSaving,
+                onOpenSpellbook = { onOpenSpellbook(character.id) },
+                modifier = Modifier.padding(
+                    start = 12.dp,
+                    top = 10.dp,
+                    end = 12.dp,
+                    bottom = 8.dp
                 )
-
-                Spacer(Modifier.height(12.dp))
-            }
-
-            Text(
-                text = c.name,
-                style = MaterialTheme.typography.headlineSmall
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = buildString {
-                    append(
-                        CompendiumLookup.characterRaceDisplayName(
-                            c.race,
-                            c.raceVariant
-                        )
-                    )
-                    if (c.subclass.isNotBlank()) {
-                        append(" ")
-                        append(CompendiumLookup.subclassDisplayName(c.subclass))
-                    }
-                    append(" ")
-                    append(CompendiumLookup.classDisplayName(c.characterClass))
-                    append(" • Level ${c.level}")
-                },
-                style = MaterialTheme.typography.bodyLarge
+            CharacterSheetTabs(
+                sections = sections,
+                selectedSection = selectedSection,
+                onSelectSection = selectSection
             )
 
-            Spacer(Modifier.height(6.dp))
-
-            Text(
-                text = "Notes",
-                style = MaterialTheme.typography.titleSmall
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                text = if (c.notes.isBlank()) "No notes." else c.notes,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Button(
-                onClick = { onOpenEdit(c.id) },
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollStates.getValue(selectedSection))
+                    .padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Edit Character")
-            }
+                when (selectedSection) {
+                    CharacterSheetSection.OVERVIEW -> {
+                        CharacterPlayOverviewPanel(
+                            character = character,
+                            derived = derived
+                        )
+                    }
 
-            if (isSpellcaster) {
-                Spacer(Modifier.height(12.dp))
+                    CharacterSheetSection.COMBAT -> {
+                        CharacterCombatRollsPanel(
+                            character = character,
+                            derived = derived
+                        )
+                        CharacterSessionCard(
+                            character = character,
+                            isSaving = isSessionSaving,
+                            message = sessionMessage,
+                            onDamage = vm::takeDamage,
+                            onHeal = vm::heal,
+                            onSetTemporaryHitPoints = vm::setTemporaryHitPoints,
+                            onRollDeathSave = vm::rollDeathSave,
+                            onResetDeathSaves = vm::resetDeathSaves,
+                            onSpendHitDie = vm::spendHitDie,
+                            onUseSpellSlot = vm::useSpellSlot,
+                            onRestoreSpellSlot = vm::restoreSpellSlot,
+                            onShortRest = vm::takeShortRest,
+                            onLongRest = vm::takeLongRest,
+                            onToggleInspiration = vm::toggleInspiration
+                        )
+                    }
 
-                Button(
-                    onClick = { onOpenSpellbook(c.id) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Open Spellbook")
+                    CharacterSheetSection.ABILITIES -> {
+                        CharacterAbilitiesBeyondPanel(
+                            character = character,
+                            derived = derived
+                        )
+                    }
+
+                    CharacterSheetSection.FEATURES -> {
+                        CharacterFeaturesOverviewPanel(
+                            character = character,
+                            derived = derived
+                        )
+                        LedgerDisclosureSection(
+                            title = "Class Feature Controls",
+                            summary = "Use, restore, and end tracked class resources.",
+                            initiallyExpanded = true
+                        ) {
+                            CharacterFeaturesCard(
+                                character = character,
+                                isSaving = isSessionSaving,
+                                onUseFeature = vm::useFeature,
+                                onRestoreFeature = vm::restoreFeature,
+                                onEndFeature = vm::endFeature
+                            )
+                        }
+                        LedgerDisclosureSection(
+                            title = "Subclass",
+                            summary = if (character.subclass.isBlank()) {
+                                "No subclass selected."
+                            } else {
+                                "Subclass identity, choices, and unlocked features."
+                            }
+                        ) {
+                            CharacterSubclassCard(character = character)
+                        }
+                        LedgerDisclosureSection(
+                            title = "Advancement",
+                            summary = "Level progression, feats, and advancement choices."
+                        ) {
+                            CharacterAdvancementCard(character = character)
+                        }
+                    }
+
+                    CharacterSheetSection.INVENTORY -> {
+                        CharacterInventoryItemCards(character = character)
+                    }
+
+                    CharacterSheetSection.STORY -> {
+                        CharacterStoryOverviewPanel(character = character)
+                        LedgerDisclosureSection(
+                            title = "Ancestry & Traits",
+                            summary = "Ancestry, heritage, languages, and racial traits."
+                        ) {
+                            CharacterAncestryCard(character = character)
+                        }
+                        LedgerDisclosureSection(
+                            title = "Background",
+                            summary = "Background feature, proficiencies, and origin details."
+                        ) {
+                            CharacterBackgroundCard(character = character)
+                        }
+                    }
                 }
             }
+        }
+    }
+}
 
-            Spacer(Modifier.height(16.dp))
+@Composable
+private fun CharacterSheetLoading() {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Opening character ledger…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
 
-            CharacterSessionCard(
-                character = c,
-                isSaving = isSessionSaving,
-                message = sessionMessage,
-                onDamage = vm::takeDamage,
-                onHeal = vm::heal,
-                onSetTemporaryHitPoints = vm::setTemporaryHitPoints,
-                onRollDeathSave = vm::rollDeathSave,
-                onResetDeathSaves = vm::resetDeathSaves,
-                onSpendHitDie = vm::spendHitDie,
-                onUseSpellSlot = vm::useSpellSlot,
-                onRestoreSpellSlot = vm::restoreSpellSlot,
-                onShortRest = vm::takeShortRest,
-                onLongRest = vm::takeLongRest,
-                onToggleInspiration = vm::toggleInspiration
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterFeaturesCard(
-                character = c,
-                isSaving = isSessionSaving,
-                onUseFeature = vm::useFeature,
-                onRestoreFeature = vm::restoreFeature,
-                onEndFeature = vm::endFeature
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterDerivedStatsCard(character = c)
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterAncestryCard(character = c)
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterSubclassCard(character = c)
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterBackgroundCard(character = c)
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterAdvancementCard(character = c)
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterEquipmentCard(character = c)
-
-            Spacer(Modifier.height(12.dp))
-
-            CharacterInventoryCard(character = c)
+@Composable
+private fun CharacterSheetError(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(
+            modifier = Modifier.padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            LedgerPanel(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Character unavailable",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Use the back arrow and try opening the character again.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
